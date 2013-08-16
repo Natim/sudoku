@@ -44,7 +44,8 @@ bool alert(int x, int y, int width, int height, string message, string titre){
   tracerRectangle(x, y, x+LARGEUR, y+HAUTEUR);
   tracerRectangle(x, y+20, x+LARGEUR, y+HAUTEUR);
   while(true){
-    if(testerClic()){
+      attendreClic();
+      // if(testerClic()){
       positionSouris(&X, &Y);
       if(Y > y + HAUTEUR - 30 && Y < y + HAUTEUR - 10){
 	if(X > x + 25 && X < x + 55)
@@ -55,5 +56,5 @@ bool alert(int x, int y, int width, int height, string message, string titre){
     }
     usleep(10000);
     rafraichirFenetre();
-  }
+    //}
 }
