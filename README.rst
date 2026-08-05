@@ -3,9 +3,11 @@ Sudoku Solveur
 ==============
 
 
-.. image:: docs/screenshot.png
-   :alt: Interface du solveur Sudoku
-   :align: center
+.. raw:: html
+
+   <div align="center">
+     <img src="docs/screenshot.png" alt="Interface du solveur Sudoku" width="400" />
+   </div>
 
 Voici les grandes lignes de ce projet.
 
