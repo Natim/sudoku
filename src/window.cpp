@@ -148,19 +148,6 @@ static const long ICONE_BLOC  = 0xFF23496E;
 
 static void barreIcone(long * pixels, int taille,
 		       int x, int y, int larg, int haut, long couleur){
-  if(x < 0){
-    larg += x;
-    x = 0;
-  }
-  if(y < 0){
-    haut += y;
-    y = 0;
-  }
-  if(x + larg > taille)
-    larg = taille - x;
-  if(y + haut > taille)
-    haut = taille - y;
-
   for(int j = 0; j < haut; j++)
     for(int i = 0; i < larg; i++)
       pixels[(y + j) * taille + x + i] = couleur;
@@ -208,6 +195,10 @@ static void peindreIcone(long * pixels, int taille){
   hauteur ; le gestionnaire de fenetres retient celle qui approche le mieux la
   taille dont il a besoin. Les CARD32 d'une propriete de format 32 se passent
   dans un tableau de long, quelle que soit la taille d'un long.
+
+  Mutter 18 (GNOME 50) n'expose plus ces pixels a GNOME Shell : la propriete ne
+  sert donc plus rien sous GNOME, mais reste lue par les autres environnements.
+  C'est definirClasse() qui donne son icone au dock de GNOME.
 */
 static void definirIcone(){
   static const int tailles[] = { 16, 32, 48, 64, 128 };
@@ -228,6 +219,23 @@ static void definirIcone(){
 		  (const unsigned char *) donnees.data(), (int) donnees.size());
 }
 
+/*
+  GNOME Shell ne rattache une fenetre a une application, et donc a une icone
+  dans le dock, qu'en comparant son WM_CLASS au StartupWMClass des entrees de
+  bureau installees. Sans WM_CLASS la fenetre reste anonyme et recoit l'icone
+  generique application-x-executable.
+
+  La classe doit rester identique au StartupWMClass de
+  packaging/sudoku.desktop.in.
+*/
+static void definirClasse(){
+  XClassHint * classe = XAllocClassHint();
+  classe->res_name  = (char *) "sudoku";
+  classe->res_class = (char *) "Sudoku";
+  XSetClassHint(mydisplay, mywindow, classe);
+  XFree(classe);
+}
+
 void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
   largeurRef = larg;
   hauteurRef = haut;
@@ -237,6 +245,7 @@ void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
   // graphlib sets the title via XSetStandardProperties (Latin-1).
   Xutf8SetWMProperties(mydisplay, mywindow, titre, titre, NULL, 0, NULL, NULL, NULL);
 
+  definirClasse();
   definirIcone();
 
   XSizeHints * contraintes = XAllocSizeHints();

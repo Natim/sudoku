@@ -25,6 +25,16 @@ target_compile_definitions(sudoku PRIVATE
 
 target_compile_options(sudoku PRIVATE -Wall -Wextra)
 
+# L'entree de bureau designe l'executable et l'icone par chemin absolu : le jeu
+# se lance depuis l'arborescence des sources, sans etape d'installation.
+set(SUDOKU_EXEC "${CMAKE_CURRENT_BINARY_DIR}/sudoku")
+set(SUDOKU_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/sudoku.svg")
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/packaging/sudoku.desktop.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/sudoku.desktop"
+  @ONLY
+)
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(GRAPHLIB_LIB "${CMAKE_CURRENT_SOURCE_DIR}/third_party/graphlib/lib/libgraphlib_64.a")
 else()
