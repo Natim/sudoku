@@ -74,5 +74,5 @@ void afficherSudoku(Sudoku s);
 int hasard(int nb);
 Sudoku lireGrille();
 
-Sudoku chargerGrille(char * chemin);
-bool sauvegarderGrille(Sudoku s, char * chemin);
+Sudoku chargerGrille(const char * chemin);
+bool sauvegarderGrille(Sudoku s, const char * chemin);

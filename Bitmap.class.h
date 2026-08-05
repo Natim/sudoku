@@ -9,6 +9,7 @@
 #define __BITMAP_H_
 #include <iostream>
 #include <cstdio>
+#include <string>
 
 using namespace std;
 
@@ -51,16 +52,16 @@ typedef struct {
 class Bitmap {
 public:
     // Attributs
-    char * nom;
+    string nom;
 
     int width,height,nbCouleurs;
 
     // Méthodes
     Bitmap(void);
-    Bitmap(char *);
+    Bitmap(const char *);
     ~Bitmap();
 
-    bool loadBMP(char *);
+    bool loadBMP(const char *);
     void affiche(int x, int y);
     void initPal();
 

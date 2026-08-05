@@ -22,7 +22,7 @@ Bitmap::Bitmap(){
 }
 
 // Constructeur permettant de charger un fichier
-Bitmap::Bitmap(char *file){
+Bitmap::Bitmap(const char *file){
   couleurs = NULL;
   donnees  = NULL;
   pal      = NULL;
@@ -43,20 +43,17 @@ Bitmap::~Bitmap(){
 }
 
 // Charge un fichier bitmap d'un fichier dans la mémoire
-bool Bitmap::loadBMP(char *file) {
+bool Bitmap::loadBMP(const char *file) {
   FILE * in = NULL;             // Descripteur de l'image à lire
   nom = file;            // Stockage du nom du fichier
   
   // On verifie qu'une image n'a pas déjà été chargée dans cette instance
-  if(couleurs != NULL){
-    delete[] couleurs;
-  }
-  if(donnees != NULL){
-    delete[] donnees;
-  }
-  if(pal != NULL){
-    delete[] pal;
-  }
+  delete[] couleurs;
+  couleurs = NULL;
+  delete[] donnees;
+  donnees  = NULL;
+  delete[] pal;
+  pal      = NULL;
   
   // On ouvre le fichier en lecture binaire
   in = fopen(file, "rb");
@@ -64,12 +61,15 @@ bool Bitmap::loadBMP(char *file) {
   // Si la lecture n'a pas fonctionnée, on returne un signal d'erreur
   if(in == NULL) {
     cerr << "Impossible d'ouvrir le fichier " << file << endl;
-    fclose(in);
     return false;
   }
   
   // On lit l'integralité de l'entete du fichier bitmap
-  fread(&bmfh, sizeof(BitmapFileHeader), 1, in);
+  if(fread(&bmfh, sizeof(BitmapFileHeader), 1, in) != 1) {
+    cerr << "Entete de fichier illisible dans " << file << endl;
+    fclose(in);
+    return false;
+  }
   
   // On verifie que le BitMap est bien au format DIB
   if(bmfh.bfType != BITMAP_MAGIC_NUMBER) {
@@ -79,7 +79,11 @@ bool Bitmap::loadBMP(char *file) {
   }
   
   // On lit les informations d'entête
-  fread(&bmih, sizeof(BitmapInfoHeader), 1, in);
+  if(fread(&bmih, sizeof(BitmapInfoHeader), 1, in) != 1) {
+    cerr << "Entete bitmap illisible dans " << file << endl;
+    fclose(in);
+    return false;
+  }
   
   // On sauvegarde la largeur, hauteur et resolution du fichier bitmap
   width  = bmih.biWidth;
@@ -107,7 +111,11 @@ bool Bitmap::loadBMP(char *file) {
   couleurs = new RVBCoul[nbCouleurs];
 
   // Le format est en BVR. On lit chaque couleurs
-  fread(couleurs, sizeof(RVBCoul), nbCouleurs, in);
+  if(fread(couleurs, sizeof(RVBCoul), nbCouleurs, in) != (size_t) nbCouleurs) {
+    cerr << "Palette illisible dans " << file << endl;
+    fclose(in);
+    return false;
+  }
 
   // On crée la palette graphlib en RVB
   for(int i = 0; i < nbCouleurs; i++){
@@ -129,7 +137,11 @@ bool Bitmap::loadBMP(char *file) {
   
   fseek(in, bmfh.bfOffBits, SEEK_SET);
   // On charge l'image
-  fread(donnees, sizeof(char), tailleDonnees, in);
+  if(fread(donnees, sizeof(char), tailleDonnees, in) != tailleDonnees) {
+    cerr << "Donnees d'image illisibles dans " << file << endl;
+    fclose(in);
+    return false;
+  }
   
   // On ferme le fichier car on a fini
   fclose(in);

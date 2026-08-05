@@ -33,11 +33,11 @@ bool alert(int x, int y, int width, int height, string message, string titre){
   /* Boutons */
   modifierCouleur(1);
   tracerRectangle(x + 25, y + HAUTEUR - 30, x + 55, y + HAUTEUR - 10);
-  ecrireSurImpression(x + 32, y + HAUTEUR - 15, "Oui");
+  ecrireSurImpression(x + 32, y + HAUTEUR - 15, (char *) "Oui");
   
   modifierCouleur(1);
   tracerRectangle(x + LARGEUR - 55, y + HAUTEUR - 30, x + LARGEUR - 25, y + HAUTEUR - 10);
-  ecrireSurImpression(x + LARGEUR - 48, y +  HAUTEUR - 15, "Non");
+  ecrireSurImpression(x + LARGEUR - 48, y +  HAUTEUR - 15, (char *) "Non");
   
   /* Contours */
   modifierCouleur(0);

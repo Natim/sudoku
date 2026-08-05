@@ -47,7 +47,7 @@ int main(){
   alloueBmp();            // Alloue les bitmaps
   Sudoku sudoku = initGrille();
 
-  ouvrirFenetreTailleTitre(FENETRE, FENETRE, "Sudoku - Rémy HUBSCHER(c)");
+  ouvrirFenetreTailleTitre(FENETRE, FENETRE, (char *) "Sudoku - Rémy HUBSCHER(c)");
   refresh(sudoku);
 
   while(!quitter){
@@ -168,15 +168,17 @@ void alloueBmp(){
   b = new Bouton[10];
 
   for(i=0; i < 10; i++){
-    sprintf(chemin, "images/%d.bmp", i);
+    snprintf(chemin, 255, "images/%d.bmp", i);
     b[i].up = new Bitmap(chemin);
 
-    sprintf(chemin, "images/%dd.bmp", i);
+    snprintf(chemin, 255, "images/%dd.bmp", i);
     b[i].down = new Bitmap(chemin);
 
     b[i].x = 140 + i*36;
     b[i].nb= i;
   }
+
+  delete[] chemin;
 }
 
 void desalloueBmp(){
@@ -202,7 +204,7 @@ void desalloueBmp(){
     delete b[i].down;
   }
 
-  delete b;
+  delete[] b;
 }
 
 void menu(){

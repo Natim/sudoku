@@ -229,7 +229,7 @@ Sudoku lireGrille(){
   return s;
 }
 
-Sudoku chargerGrille(char * chemin){
+Sudoku chargerGrille(const char * chemin){
   ifstream fic;
   int code;
   int i, j;
@@ -242,7 +242,7 @@ Sudoku chargerGrille(char * chemin){
       for(j = 0; j < 9; j++)
 	if(!fic.eof()){
 	  fic >> code;
-	  !placer(&s, i, j, code);
+	  placer(&s, i, j, code);
 	}
     return s;
   }else
@@ -250,7 +250,7 @@ Sudoku chargerGrille(char * chemin){
   fic.close();
 }
 
-bool sauvegarderGrille(Sudoku s, char * chemin){
+bool sauvegarderGrille(Sudoku s, const char * chemin){
   ofstream fic;
   int i, j;
   fic.open(chemin, ios::out);

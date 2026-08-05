@@ -1,18 +1,27 @@
-CPP=g++
+# Dependances : les en-tetes de developpement X11 (paquet libx11-dev)
+
+CXX=g++
 CXXFLAGS=-O3 -g -Wall
-LDFLAGS=-L/usr/X11R6/lib -Llib -lgraphlib -lX11
+LDFLAGS=-Llib
+LDLIBS=-lgraphlib -lX11
+
+OBJETS=sudoku.o Bitmap.class.o Sudoku.struct.o BoiteDialogue.o
 
 all: sudoku
 
-sudoku: sudoku.o Bitmap.class.o Sudoku.struct.o BoiteDialogue.o
-	${CPP} ${CXXFLAGS} -o sudoku $^ ${LDFLAGS}
+sudoku: ${OBJETS}
+	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS} ${LDLIBS}
 
 %.o: %.cpp
-	${CPP} ${CXXFLAGS} -c $^
+	${CXX} ${CXXFLAGS} -MMD -MP -c $<
+
+-include ${OBJETS:.o=.d}
 
 clean:
-	rm -fr *~
-	rm -fr *.o
+	rm -f *~
+	rm -f *.o *.d
 
 mrproper: clean
-	rm -fr sudoku
+	rm -f sudoku
+
+.PHONY: all clean mrproper
