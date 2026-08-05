@@ -28,8 +28,10 @@ static void dessinerBoite(int x, int y, int LARGEUR, int HAUTEUR,
   modifierCouleur(238);
   rectanglePlein(x, y, x+LARGEUR, y+20);
   modifierCouleur(1);
-  ecrire(x + (LARGEUR-titre.size()*6)/2, y+15, titre.c_str());
-  ligne(x + (LARGEUR-titre.size()*6)/2, y+17, x +(LARGEUR-titre.size()*6)/2 + titre.size()*6, y+17);
+  const int largeurTitre = largeurTexte(titre.c_str());
+  const int debutTitre   = x + (LARGEUR - largeurTitre)/2;
+  ecrire(debutTitre, y+15, titre.c_str());
+  ligne(debutTitre, y+17, debutTitre + largeurTitre, y+17);
 
   /* Texte */
   modifierCouleur(1);
