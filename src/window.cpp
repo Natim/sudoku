@@ -198,7 +198,7 @@ static void peindreIcone(long * pixels, int taille){
 
   Mutter 18 (GNOME 50) n'expose plus ces pixels a GNOME Shell : la propriete ne
   sert donc plus rien sous GNOME, mais reste lue par les autres environnements.
-  C'est definirClasse() qui donne son icone au dock de GNOME.
+  C'est definirIconeDock() qui donne son icone au dock de GNOME.
 */
 static void definirIcone(){
   static const int tailles[] = { 16, 32, 48, 64, 128 };
@@ -228,7 +228,7 @@ static void definirIcone(){
   La classe doit rester identique au StartupWMClass de
   packaging/sudoku.desktop.in.
 */
-static void definirClasse(){
+static void definirIconeDock(){
   XClassHint * classe = XAllocClassHint();
   classe->res_name  = (char *) "sudoku";
   classe->res_class = (char *) "Sudoku";
@@ -245,7 +245,7 @@ void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
   // graphlib sets the title via XSetStandardProperties (Latin-1).
   Xutf8SetWMProperties(mydisplay, mywindow, titre, titre, NULL, 0, NULL, NULL, NULL);
 
-  definirClasse();
+  definirIconeDock();
   definirIcone();
 
   XSizeHints * contraintes = XAllocSizeHints();
