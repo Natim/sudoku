@@ -40,6 +40,11 @@ static const int RESIZE_QUIET_MS = 150;
 // Beyond this, stop enforcing the aspect ratio and just center the content.
 static const int MAX_CORRECTIONS = 3;
 
+// Share of the screen the window takes when it opens. The reference size is a
+// logical coordinate system, not a comfortable size in pixels: 600 of them
+// cover barely a quarter of the height of a 1080p screen.
+static const double SCREEN_SHARE = 0.75;
+
 static const long EVENT_MASK =
   KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
   EnterWindowMask | LeaveWindowMask | KeymapStateMask | ExposureMask |
@@ -233,9 +238,51 @@ static void setDockIcon(){
   XFree(hint);
 }
 
-void openScalableWindow(int width, int height, const char * title){
-  refWidth = width;
-  refHeight = height;
+/*
+  Graphlib connects to the X server only when the window opens, so the screen
+  dimensions are read over a connection of our own. A failure here is not worth
+  reporting: the window opens at its reference size instead.
+*/
+static void screenSize(int * width, int * height){
+  *width = *height = 0;
+
+  Display * display = XOpenDisplay(NULL);
+  if(display == NULL)
+    return;
+
+  int screen = DefaultScreen(display);
+  *width  = DisplayWidth(display, screen);
+  *height = DisplayHeight(display, screen);
+  XCloseDisplay(display);
+}
+
+static void initialSize(int * width, int * height){
+  int screenWidth, screenHeight;
+  screenSize(&screenWidth, &screenHeight);
+
+  double f = 1.0;
+  if(screenWidth > 0 && screenHeight > 0){
+    // Both axes are considered: with several monitors merged into one screen,
+    // the width alone would size the window for the whole desk.
+    double fx = screenWidth * SCREEN_SHARE / refWidth;
+    double fy = screenHeight * SCREEN_SHARE / refHeight;
+    f = (fx < fy) ? fx : fy;
+  }
+
+  // Small screens keep the reference size, which the user can still shrink.
+  if(f < 1.0)
+    f = 1.0;
+
+  *width  = (int) lround(refWidth * f);
+  *height = (int) lround(refHeight * f);
+}
+
+void openScalableWindow(int logicalWidth, int logicalHeight, const char * title){
+  refWidth = logicalWidth;
+  refHeight = logicalHeight;
+
+  int width, height;
+  initialSize(&width, &height);
 
   ouvrirFenetreTailleTitre(width, height, (char *) title);
 
@@ -253,8 +300,8 @@ void openScalableWindow(int width, int height, const char * title){
   hints->min_height = refHeight / 4;
   // Aspect ratios apply to the size minus the base size.
   hints->base_width = hints->base_height = 0;
-  hints->min_aspect.x = hints->max_aspect.x = width;
-  hints->min_aspect.y = hints->max_aspect.y = height;
+  hints->min_aspect.x = hints->max_aspect.x = refWidth;
+  hints->min_aspect.y = hints->max_aspect.y = refHeight;
   XSetWMNormalHints(mydisplay, mywindow, hints);
   XFree(hints);
 

@@ -1,6 +1,8 @@
 #pragma once
 
-void openScalableWindow(int width, int height, const char * title);
+// The size given is the logical coordinate system drawing uses; the window
+// itself opens larger or smaller depending on the screen.
+void openScalableWindow(int logicalWidth, int logicalHeight, const char * title);
 
 double scale();
 int pixX(int x);
