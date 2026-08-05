@@ -32,10 +32,12 @@ const int SHADOW       = 242;
    the digit: a bitmap costs one rectangle per run of identical pixels, far too
    many to animate. */
 const int HALO_COLORS[] = { YELLOW, PALE_YELLOW, FAINT_YELLOW };
-const int HALO_BAND     = sizeof HALO_COLORS / sizeof *HALO_COLORS;
-const int HALO_MARGIN   = 2;
-const int WAVE_DELAY_US = 40000;
-const int WAVE_PASSES   = 2;
+const int HALO_BAND      = sizeof HALO_COLORS / sizeof *HALO_COLORS;
+// Cells are 20 logical units apart inside a block, so a frame of 6 stays well
+// clear of its neighbours.
+const int HALO_THICKNESS = 6;
+const int WAVE_DELAY_US  = 25000;
+const int WAVE_PASSES    = 2;
 
 const int TITLE_HEIGHT = 36;
 const int STAR_RADIUS  = 15;
@@ -151,15 +153,21 @@ void drawPanel(const Score & score, const vector<string> & labels){
   drawRect(panelX, panelY + TITLE_HEIGHT, panelX + BOX_WIDTH, panelY + BOX_HEIGHT);
 }
 
-// Ring drawn in the white gap around a cell, the two rectangles making it
-// thick enough to be seen once the window is scaled down.
+/* Frame filling the white gap around a cell. The four bands stop at the edges
+   of the cell so the digit underneath is never painted over: redrawing it
+   afterwards would cost a rectangle per run of identical pixels. */
 void halo(CellLocator locate, int cellSize, int row, int col, int color){
   int x, y;
   locate(row, col, &x, &y);
 
+  const int x1 = x - HALO_THICKNESS, x2 = x + cellSize + HALO_THICKNESS;
+  const int y1 = y - HALO_THICKNESS, y2 = y + cellSize + HALO_THICKNESS;
+
   modifierCouleur(color);
-  for(int margin = HALO_MARGIN; margin <= HALO_MARGIN + 1; margin++)
-    drawRect(x - margin, y - margin, x + cellSize + margin, y + cellSize + margin);
+  fillRect(x1, y1, x2, y);
+  fillRect(x1, y + cellSize, x2, y2);
+  fillRect(x1, y, x, y + cellSize);
+  fillRect(x + cellSize, y, x2, y + cellSize);
 }
 
 void wave(CellLocator locate, int cellSize, bool forward){

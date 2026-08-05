@@ -1,9 +1,7 @@
 // Checks the BMP reader against the variants it supports, by writing files
 // whose expected content is known and comparing the decoded pixels.
 //
-//   g++ -std=c++17 -Iinclude -Ithird_party/graphlib/include
-//       scripts/verify_bitmap.cpp src/bitmap.cpp src/window.cpp src/encoding.cpp
-//       third_party/graphlib/lib/libgraphlib_64.a -lX11 -o build/verify_bitmap
+//   make verify-bitmap
 //
 // Nothing here opens a window, so it runs without a display.
 #include "bitmap.h"

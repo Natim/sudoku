@@ -1,5 +1,7 @@
 // Temporary check of the winning sequence: run it with a time in seconds, and
 // optionally a complexity, to see the wave and the panel that follows.
+//
+//   make verify-celebration ARGS="2500 120"
 extern "C"{
 #include "graphlib.h"
 }

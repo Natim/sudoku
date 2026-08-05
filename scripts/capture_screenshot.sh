@@ -5,11 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-cmake --build build >/dev/null
-
-g++ -std=c++17 -Iinclude \
-  scripts/write_sample_grid.cpp src/random.cpp src/generator.cpp src/sudoku_grid.cpp \
-  -o build/write_sample_grid
+cmake --build build --target sudoku write_sample_grid >/dev/null
 ./build/write_sample_grid
 
 SUDOKU_AUTO_LOAD=grille.sdk ./build/sudoku &
