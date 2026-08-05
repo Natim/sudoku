@@ -1,18 +1,17 @@
 #pragma once
 
+#include <cstdio>
 #include <string>
 
-const short BITMAP_MAGIC_NUMBER = 19778;
-const int   RGB_BYTE_SIZE = 3;
+const unsigned short BITMAP_MAGIC_NUMBER = 19778;
+const int            RGB_BYTE_SIZE = 3;
 
-#pragma pack(push, bitmap_data, 1)
-
-typedef struct {
-  char blue;
-  char green;
-  char red;
-  char reserved;
-} RgbColor;
+// On-disk header sizes. The info header comes in several versions: 12 bytes for
+// the OS/2 core header, 40 for BITMAPINFOHEADER, and 52, 56, 108 or 124 for the
+// later versions, which extend it without moving the first fields.
+const unsigned int BITMAP_FILE_HEADER_SIZE = 14;
+const unsigned int BITMAP_CORE_HEADER_SIZE = 12;
+const unsigned int BITMAP_INFO_HEADER_SIZE = 40;
 
 typedef struct {
   unsigned short bfType;
@@ -36,8 +35,6 @@ typedef struct {
   unsigned int   biClrImportant;
 } BitmapInfoHeader;
 
-#pragma pack(pop, bitmap_data)
-
 class Bitmap {
 public:
     std::string name;
@@ -49,6 +46,10 @@ public:
     ~Bitmap();
 
     bool loadBMP(const char *);
+    bool isLoaded() const;
+    // Palette index of one pixel, (0, 0) being the top left corner. Returns -1
+    // outside the image.
+    int indexAt(int x, int y) const;
     void draw(int x, int y);
     void applyPalette();
     void fillBackground(int x1, int y1, int x2, int y2);
@@ -56,6 +57,15 @@ public:
     static void invalidateAll();
 
 private:
+    void reset();
+    bool decode(std::FILE *);
+    bool readHeaders(std::FILE *, unsigned int * paletteEntrySize);
+    bool readPalette(std::FILE *, unsigned int paletteEntrySize);
+    bool readPixels(std::FILE *, bool topDown);
+    bool readRlePixels(std::FILE *);
+    void unpackRow(const unsigned char * row, unsigned char * pixels) const;
+    void putPixel(int x, int row, unsigned char index);
+    void clampIndices();
     void drawPixels(int x, int y, int width, int height);
     void registerInstance();
     void unregisterInstance();
@@ -63,14 +73,12 @@ private:
 
     BitmapFileHeader bmfh;
     BitmapInfoHeader bmih;
-    RgbColor       * colors;
-    char           * data;
+    // One palette index per pixel, top row first, whatever the depth and the
+    // row order of the file: the drawing code needs no knowledge of the format.
+    unsigned char  * data;
     unsigned char  * palette;
-    unsigned int dataSize;
     unsigned short bpp;
 
-    int byteWidth;
-    int padWidth;
     int cacheX, cacheY;
     int cacheWidth, cacheHeight;
     int whiteIndex, blackIndex;
