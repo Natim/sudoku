@@ -70,7 +70,7 @@ int main(){
   sudokuAffiche = &sudoku;
   definirRepeindreFond(repeindreTout);
 
-  ouvrirFenetreAdaptable(FENETRE, FENETRE, "Sudoku - Rémy HUBSCHER(c)");
+  ouvrirFenetreAdaptable(FENETRE, FENETRE, "Sudoku - Rémy HUBSCHER");
   peindreTout(sudoku);
 
   while(!quitter){
