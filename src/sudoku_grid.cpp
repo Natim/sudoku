@@ -9,6 +9,13 @@
 
 #include "sudoku_grid.h"
 
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <fstream>
+
+using namespace std;
+
 /***************************
  ** Création de Sudoku de **
  ** différents types      **
@@ -237,17 +244,17 @@ Sudoku chargerGrille(const char * chemin){
   Sudoku s = initGrille();
 
   fic.open(chemin, ios::in);
-  if(fic.good()){
-    for(i = 0; i < 9; i++)
-      for(j = 0; j < 9; j++)
-	if(!fic.eof()){
-	  fic >> code;
-	  placer(&s, i, j, code);
-	}
-    return s;
-  }else
+  if(!fic.good())
     return initGrille();
+
+  for(i = 0; i < 9; i++)
+    for(j = 0; j < 9; j++)
+      if(!fic.eof()){
+	fic >> code;
+	placer(&s, i, j, code);
+      }
   fic.close();
+  return s;
 }
 
 bool sauvegarderGrille(Sudoku s, const char * chemin){

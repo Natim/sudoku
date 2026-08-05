@@ -7,6 +7,8 @@ extern "C"{
 #include "window.h"
 
 #include <string>
+#include <cstdlib>
+#include <ctime>
 
 #ifndef SUDOKU_ASSETS_DIR
 #define SUDOKU_ASSETS_DIR "assets"

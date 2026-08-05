@@ -10,10 +10,14 @@
 #include "window.h"
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
+#include <iostream>
 
 extern "C"{
 #include "graphlib.h"
 }
+
+using namespace std;
 
 Bitmap * Bitmap::instances[64];
 int Bitmap::nbInstances = 0;

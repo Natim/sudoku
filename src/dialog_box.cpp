@@ -1,6 +1,15 @@
 #include "dialog_box.h"
 #include "window.h"
 
+extern "C"{
+#include "graphlib.h"
+}
+
+#include <iostream>
+#include <string>
+
+using namespace std;
+
 static void (*repeindreFond)() = NULL;
 
 void definirRepeindreFond(void (*peindre)()){

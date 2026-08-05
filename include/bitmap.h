@@ -1,22 +1,11 @@
-//------------------------------------------------------//
-// Bitmap.class.h
-// Prototype de la classe Bitmap pour ouvrir un bitmap
-//-----------------------------------------------------//
-// Auteur : Natim
-// Date de dernière modification : 18-04-2006
-//-----------------------------------------------------//
-#ifndef __BITMAP_H_
-#define __BITMAP_H_
-#include <iostream>
-#include <cstdio>
+#pragma once
+
 #include <string>
 
-using namespace std;
+const short BITMAP_MAGIC_NUMBER = 19778;
+const int   RVB_BYTE_SIZE = 3;
 
-const short BITMAP_MAGIC_NUMBER=19778;
-const int   RVB_BYTE_SIZE=3;
-
-#pragma pack(push,bitmap_data,1)
+#pragma pack(push, bitmap_data, 1)
 
 typedef struct {
   char rvbBleu;
@@ -47,17 +36,15 @@ typedef struct {
   unsigned int   biClrImportant;
 } BitmapInfoHeader;
 
-#pragma pack(pop,bitmap_data)
+#pragma pack(pop, bitmap_data)
 
 class Bitmap {
 public:
-    // Attributs
-    string nom;
+    std::string nom;
 
-    int width,height,nbCouleurs;
+    int width, height, nbCouleurs;
 
-    // Méthodes
-    Bitmap(void);
+    Bitmap();
     Bitmap(const char *);
     ~Bitmap();
 
@@ -74,23 +61,20 @@ private:
     void desenregistrer();
     static void invaliderPixels(int x1, int y1, int x2, int y2);
 
-    // Attributs
     BitmapFileHeader bmfh;
     BitmapInfoHeader bmih;
     RVBCoul       * couleurs;
     char          * donnees;
     unsigned char * pal;
-    unsigned int tailleDonnees;    // La taille des données bitmap
+    unsigned int tailleDonnees;
     unsigned short bpp;
 
-    int byteWidth;                 // La taille en bytes de l'image
-    int padWidth;                  // La taille en bytes de l'image modifiée
-    int copieX, copieY;            // -1 when no valid master tile on screen
-    int copieL, copieH;            // taille en pixels ecran de cette copie
-    int indexBlanc, indexNoir;     // Indices palette du blanc et du noir
+    int byteWidth;
+    int padWidth;
+    int copieX, copieY;
+    int copieL, copieH;
+    int indexBlanc, indexNoir;
 
     static Bitmap * instances[64];
     static int nbInstances;
 };
-
-#endif //__BITMAP_H_
