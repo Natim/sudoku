@@ -9,9 +9,11 @@ add_executable(sudoku
   src/main.cpp
   src/random.cpp
   src/bitmap.cpp
+  src/celebration.cpp
   src/dialog_box.cpp
   src/encoding.cpp
   src/generator.cpp
+  src/score.cpp
   src/sudoku_grid.cpp
   src/window.cpp
 )

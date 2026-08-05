@@ -13,5 +13,10 @@ bool waitForLogicalClick(int * x, int * y);
 void drawLine(int x1, int y1, int x2, int y2);
 void drawRect(int x1, int y1, int x2, int y2);
 void fillRect(int x1, int y1, int x2, int y2);
+void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3);
 void drawText(int x, int y, const char * text);
 int  textWidth(const char * text);
+
+// Size of the text drawn from now on, 1.0 being the usual size. Callers that
+// enlarge the text are expected to set it back.
+void setTextScale(double factor);

@@ -6,6 +6,7 @@
 
 static const int CELL_COUNT = SIZE * SIZE;
 static const unsigned ALL_DIGITS = 0x1FF;
+static const int MAX_GRADED_GUESSES = 40;
 
 struct State {
   int val[CELL_COUNT];
@@ -130,6 +131,33 @@ static int countRec(State & state, int limit){
   return total;
 }
 
+/* Solve the grid the way a player would, always taking the cell with the
+   fewest candidates first, and count the digits tried on cells where several
+   remain possible. Those are the guesses: a grid that falls out by elimination
+   alone costs nothing, one that needs long trials costs a lot. */
+static bool guessesToSolve(State & state, int * guesses){
+  int p = mrvCell(state);
+  if(p < 0)
+    return true;
+  unsigned cand = candidates(state, p);
+  if(cand == 0)
+    return false;
+
+  int digits[9];
+  int count;
+  listCandidates(cand, digits, count);
+
+  for(int i = 0; i < count; i++){
+    if(count > 1)
+      (*guesses)++;
+    setCell(state, p, digits[i]);
+    if(guessesToSolve(state, guesses))
+      return true;
+    clearCell(state, p);
+  }
+  return false;
+}
+
 static bool fillRec(State & state){
   int p = mrvCell(state);
   if(p < 0)
@@ -229,6 +257,30 @@ int countSolutions(Sudoku s, int limit){
   State state;
   stateFromSudoku(s, state);
   return countState(state, limit);
+}
+
+int gridComplexity(Sudoku s){
+  State state;
+  stateFromSudoku(s, state);
+
+  // Several solutions means the player only has to fill the grid, not to find
+  // the one arrangement that fits: there is nothing to measure.
+  if(countState(state, 2) != 1)
+    return 0;
+
+  int guesses = 0;
+  State work = state;
+  guessesToSolve(work, &guesses);
+
+  // A few grids send the solver on a very long trial. Past a point the extra
+  // guesses say more about the order it happens to try digits in than about
+  // the grid, so their contribution stops there.
+  if(guesses > MAX_GRADED_GUESSES)
+    guesses = MAX_GRADED_GUESSES;
+
+  // A guess weighs more than a hole: it stands for a deduction the player has
+  // to make instead of reading the answer off the grid.
+  return (CELL_COUNT - countClues(state)) + 3 * guesses;
 }
 
 Sudoku generateGrid(Difficulty level){

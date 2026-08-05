@@ -97,6 +97,24 @@ the choice of difficulty for a new grid.
 In this sudoku you can generate a grid, open a saved one, save a grid, place
 digits in cells, solve the grid, and quit.
 
+4/ Finishing a grid
+===================
+
+Every digit is checked as it is placed, so a full grid is a solved one: the
+last digit ends the game. A wave of light sweeps the grid, then a panel gives
+the difficulty, the time and the score. Asking the program for the solution
+gives the grid up, and the panel does not appear.
+
+The difficulty is measured rather than declared, so a grid opened from a file
+is graded like a generated one. ``gridComplexity()`` counts the empty cells and
+the digits a constraint solver has to try where elimination alone does not
+decide. A grid with several solutions is not a puzzle and is worth nothing.
+
+The score turns that complexity into points: twice as many for an instant
+solve, exactly the base for a grid solved in the time it was expected to take,
+and less and less after that without ever reaching zero. The three stars
+compare the time taken with the time expected.
+
 ----
 
 If you get the chance, I can only suggest looking at the Sudokus by Germain

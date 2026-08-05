@@ -20,6 +20,11 @@ void setBackgroundRepaint(void (*paint)()){
   repaintBackground = paint;
 }
 
+void paintBackground(){
+  if(repaintBackground != NULL)
+    repaintBackground();
+}
+
 static vector<ButtonArea> layoutButtons(int x, int y, int width, int height,
 					  const vector<string> & labels){
   const int margin = 10;
@@ -109,8 +114,7 @@ int choose(int x, int y, int width, int height,
 
   while(true){
     if(!waitForLogicalClick(&X, &Y)){
-      if(repaintBackground != NULL)
-	repaintBackground();
+      paintBackground();
       areas = layoutButtons(x, y, width, height, choices);
       drawBox(x, y, width, height, message, title, choices);
       continue;

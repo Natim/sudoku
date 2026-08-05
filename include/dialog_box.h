@@ -12,3 +12,6 @@ int choose(int x, int y, int width, int height,
            const std::vector<std::string> & choices);
 
 void setBackgroundRepaint(void (*paint)());
+
+// Repaint the window behind a modal box, after a resize under it.
+void paintBackground();

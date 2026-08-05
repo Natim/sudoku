@@ -54,6 +54,7 @@ static int refWidth = 1, refHeight = 1;  // reference window size
 static double factor = 1.0;                // screen pixels per logical unit
 static int offsetX = 0, offsetY = 0;       // centering when aspect ratio is off
 static XFontStruct * font = NULL;          // font at the current scale factor
+static double textFactor = 1.0;            // text size asked for by the caller
 
 double scale(){
   return factor;
@@ -88,7 +89,7 @@ static void updateFont(){
     "-*-fixed-medium-r-normal--%d-*-*-*-*-*-iso8859-1"
   };
 
-  int size = (int) lround(TEXT_SIZE * factor);
+  int size = (int) lround(TEXT_SIZE * factor * textFactor);
   if(size < 1)
     size = 1;
 
@@ -107,6 +108,13 @@ static void updateFont(){
     font = loaded;
     return;
   }
+}
+
+void setTextScale(double newFactor){
+  if(newFactor <= 0.0 || newFactor == textFactor)
+    return;
+  textFactor = newFactor;
+  updateFont();
 }
 
 int textWidth(const char * text){
@@ -425,6 +433,10 @@ void drawRect(int x1, int y1, int x2, int y2){
 
 void fillRect(int x1, int y1, int x2, int y2){
   remplirRectangle(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
+}
+
+void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3){
+  remplirTriangle(pixX(x1), pixY(y1), pixX(x2), pixY(y2), pixX(x3), pixY(y3));
 }
 
 void drawText(int x, int y, const char * text){

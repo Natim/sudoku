@@ -4,9 +4,12 @@ extern "C"{
 #include "bitmap.h"
 #include "sudoku_grid.h"
 #include "generator.h"
+#include "celebration.h"
 #include "dialog_box.h"
+#include "score.h"
 #include "window.h"
 
+#include <chrono>
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -37,6 +40,8 @@ const int GEN_W = 460;
 const int GEN_H = 110;
 const int GEN_X = (WINDOW_SIZE - GEN_W) / 2;
 const int GEN_Y = (WINDOW_SIZE - GEN_H) / 2;
+const int PANEL_X = (WINDOW_SIZE - PANEL_WIDTH) / 2;
+const int PANEL_Y = (WINDOW_SIZE - PANEL_HEIGHT) / 2;
 
 Button newGame;
 Button openBtn;
@@ -49,6 +54,12 @@ Button * pressed = NULL;
 int screen[9][9];
 Sudoku * displayedSudoku = NULL;
 
+// The grid the player is working on: when it was handed over, how much work it
+// demanded, and whether the solver did that work instead.
+std::chrono::steady_clock::time_point gridStart;
+int puzzleComplexity = 0;
+bool solvedByComputer = false;
+
 void loadBitmaps();
 void freeBitmaps();
 void menu();
@@ -58,6 +69,9 @@ void paintAll(Sudoku s);
 void repaintAll();
 void restoreArea(int x, int y, int width, int height);
 void afterDialog(Sudoku s);
+void startGrid(Sudoku s);
+bool newGrid(Sudoku * s);
+void winSequence(Sudoku * s);
 
 int main(){
   int x, y;
@@ -69,6 +83,7 @@ int main(){
   if(const char * path = std::getenv("SUDOKU_AUTO_LOAD"))
     sudoku = loadGrid(path);
   displayedSudoku = &sudoku;
+  startGrid(sudoku);
   setBackgroundRepaint(repaintAll);
 
   openScalableWindow(WINDOW_SIZE, WINDOW_SIZE, "Sudoku - Rémy HUBSCHER");
@@ -83,34 +98,19 @@ int main(){
       if(y >= 7 && y <= 39){
 	if(x >= newGame.x && x <= newGame.x+32){
 	  pressed = &newGame;
-	  std::vector<std::string> choices;
-	  choices.push_back("Facile");
-	  choices.push_back("Moyen");
-	  choices.push_back("Difficile");
-	  choices.push_back("Vierge");
-	  choices.push_back("Annuler");
-	  int selection = choose(GEN_X, GEN_Y, GEN_W, GEN_H,
-				  "Nouvelle grille",
-				  "Quelle difficulte ?",
-				  choices);
-	  if(selection == 0)
-	    sudoku = generateGrid(EASY);
-	  else if(selection == 1)
-	    sudoku = generateGrid(MEDIUM);
-	  else if(selection == 2)
-	    sudoku = generateGrid(HARD);
-	  else if(selection == 3)
-	    sudoku = emptyGrid();
+	  bool created = newGrid(&sudoku);
 	  pressed = NULL;
-	  if(selection >= 0 && selection <= 3)
+	  if(created)
 	    paintAll(sudoku);
 	  else
 	    afterDialog(sudoku);
 	}
 	else if(x >= openBtn.x && x <= openBtn.x+32){
 	  pressed = &openBtn;
-	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment charger une grille ?"))
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment charger une grille ?")){
 	    sudoku = loadGrid("grille.sdk");
+	    startGrid(sudoku);
+	  }
 	  pressed = NULL;
 	  afterDialog(sudoku);
 	}
@@ -128,9 +128,12 @@ int main(){
 	else if(x >= helpBtn.x && x <= helpBtn.x+32){
 	  pressed = &helpBtn;
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment avoir la solution ?")){
+	    solvedByComputer = true;
 	    if(!resolve(&sudoku)){
-	      if(alert(DIAL_X, DIAL_Y, "Aucune solution. Initialiser la grille ?"))
+	      if(alert(DIAL_X, DIAL_Y, "Aucune solution. Initialiser la grille ?")){
 		sudoku = emptyGrid();
+		startGrid(sudoku);
+	      }
 	    }
 	  }
 	  pressed = NULL;
@@ -155,8 +158,13 @@ int main(){
 	if(row < 0) row = 0;
 
 	if(pressed != NULL && pressed->digit != 10){
-	  if(place(&sudoku, row, col, pressed->digit))
+	  if(place(&sudoku, row, col, pressed->digit)){
 	    updateScreen(sudoku);
+	    // Every digit was checked as it was placed, so a full grid is a
+	    // solved one, unless the solver is the one that filled it.
+	    if(isComplete(sudoku) && !solvedByComputer)
+	      winSequence(&sudoku);
+	  }
 	}
       }
 
@@ -333,4 +341,56 @@ void afterDialog(Sudoku s){
   restoreArea(DIAL_X, DIAL_Y, DIAL_W, DIAL_H);
   restoreArea(GEN_X, GEN_Y, GEN_W, GEN_H);
   updateScreen(s);
+}
+
+/* Hand a grid over to the player: the clock starts, and how much the grid is
+   worth is measured while it is still untouched. */
+void startGrid(Sudoku s){
+  puzzleComplexity = gridComplexity(s);
+  gridStart = std::chrono::steady_clock::now();
+  solvedByComputer = false;
+}
+
+// Ask for a difficulty and deal the grid. False when the player cancels.
+bool newGrid(Sudoku * s){
+  std::vector<std::string> choices;
+  choices.push_back("Facile");
+  choices.push_back("Moyen");
+  choices.push_back("Difficile");
+  choices.push_back("Vierge");
+  choices.push_back("Annuler");
+
+  int selection = choose(GEN_X, GEN_Y, GEN_W, GEN_H,
+			 "Nouvelle grille",
+			 "Quelle difficulte ?",
+			 choices);
+  if(selection == 0)
+    *s = generateGrid(EASY);
+  else if(selection == 1)
+    *s = generateGrid(MEDIUM);
+  else if(selection == 2)
+    *s = generateGrid(HARD);
+  else if(selection == 3)
+    *s = emptyGrid();
+  else
+    return false;
+
+  startGrid(*s);
+  return true;
+}
+
+void winSequence(Sudoku * s){
+  int seconds = (int) std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::steady_clock::now() - gridStart).count();
+
+  bool again = celebrate(PANEL_X, PANEL_Y, cellPosition, CELL_SIZE,
+			 rateGame(puzzleComplexity, seconds));
+
+  restoreArea(PANEL_X, PANEL_Y, PANEL_WIDTH, PANEL_HEIGHT);
+  updateScreen(*s);
+
+  if(again && newGrid(s))
+    paintAll(*s);
+  else
+    afterDialog(*s);
 }
