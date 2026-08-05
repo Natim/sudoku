@@ -2,6 +2,13 @@
 Sudoku Solver
 ==============
 
+
+.. raw:: html
+
+   <div align="center">
+     <img src="docs/screenshot.png" alt="Sudoku solver interface" width="400" />
+   </div>
+
 Another project that went a long time without a complete generator. Here are
 the main outlines anyway.
 
