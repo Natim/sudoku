@@ -8,11 +8,13 @@ extern "C"{
 }
 #include "window.h"
 #include "encoding.h"
+#include <X11/Xatom.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <sys/select.h>
+#include <vector>
 
 /*
   Graphlib expose les objets X11 qu'elle manipule. On s'en sert pour deux
@@ -132,6 +134,100 @@ static void adapterTaille(int larg, int haut){
   adapterPolice();
 }
 
+/*
+  L'icone est dessinee ici plutot que chargee d'un fichier : le format ARGB
+  attendu par le gestionnaire de fenetres n'a rien de commun avec les bitmaps
+  indexes d'assets/, et une grille se decrit en quelques traits.
+
+  Les couleurs sont opaques : la specification ne dit pas si l'alpha est
+  pre-multiplie, et les gestionnaires de fenetres ne s'accordent pas.
+*/
+static const long ICONE_FOND  = 0xFFFFFFFF;
+static const long ICONE_TRAIT = 0xFFB4B4B4;
+static const long ICONE_BLOC  = 0xFF23496E;
+
+static void barreIcone(long * pixels, int taille,
+		       int x, int y, int larg, int haut, long couleur){
+  if(x < 0){
+    larg += x;
+    x = 0;
+  }
+  if(y < 0){
+    haut += y;
+    y = 0;
+  }
+  if(x + larg > taille)
+    larg = taille - x;
+  if(y + haut > taille)
+    haut = taille - y;
+
+  for(int j = 0; j < haut; j++)
+    for(int i = 0; i < larg; i++)
+      pixels[(y + j) * taille + x + i] = couleur;
+}
+
+static void peindreIcone(long * pixels, int taille){
+  for(int i = 0; i < taille * taille; i++)
+    pixels[i] = ICONE_FOND;
+
+  // Les deux sortes de traits se distinguent d'abord par leur couleur : aux
+  // petites tailles ils tombent tous a un pixel.
+  int epaisBloc = taille / 32;
+  if(epaisBloc < 1)
+    epaisBloc = 1;
+  int epaisFine = taille / 64;
+  if(epaisFine < 1)
+    epaisFine = 1;
+
+  // En dessous de 48 pixels, une case fait moins de trois pixels et les neuf
+  // colonnes tournent au gris : on ne garde que les separateurs de blocs.
+  bool lignesFines = (taille >= 48);
+
+  // Les traits de bloc sont traces en second pour couvrir les traits fins.
+  for(int passe = 0; passe < 2; passe++){
+    bool blocs = (passe == 1);
+    if(!blocs && !lignesFines)
+      continue;
+
+    int epais = blocs ? epaisBloc : epaisFine;
+    long couleur = blocs ? ICONE_BLOC : ICONE_TRAIT;
+
+    for(int k = 0; k <= 9; k++){
+      if((k % 3 == 0) != blocs)
+	continue;
+      // Le trait k = 9 doit rester dans l'image, d'ou l'epaisseur retiree.
+      int pos = k * (taille - epais) / 9;
+      barreIcone(pixels, taille, pos, 0, epais, taille, couleur);
+      barreIcone(pixels, taille, 0, pos, taille, epais, couleur);
+    }
+  }
+}
+
+/*
+  _NET_WM_ICON est une suite d'images, chacune precedee de sa largeur et de sa
+  hauteur ; le gestionnaire de fenetres retient celle qui approche le mieux la
+  taille dont il a besoin. Les CARD32 d'une propriete de format 32 se passent
+  dans un tableau de long, quelle que soit la taille d'un long.
+*/
+static void definirIcone(){
+  static const int tailles[] = { 16, 32, 48, 64, 128 };
+
+  std::vector<long> donnees;
+  for(unsigned int i = 0; i < sizeof tailles / sizeof *tailles; i++){
+    int taille = tailles[i];
+    size_t debut = donnees.size();
+    donnees.resize(debut + 2 + (size_t) taille * taille);
+    donnees[debut]     = taille;
+    donnees[debut + 1] = taille;
+    peindreIcone(&donnees[debut + 2], taille);
+  }
+
+  XChangeProperty(mydisplay, mywindow,
+		  XInternAtom(mydisplay, "_NET_WM_ICON", False),
+		  XA_CARDINAL, 32, PropModeReplace,
+		  (const unsigned char *) donnees.data(), (int) donnees.size());
+}
+
 void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
   largeurRef = larg;
   hauteurRef = haut;
@@ -140,6 +236,8 @@ void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
 
   // graphlib sets the title via XSetStandardProperties (Latin-1).
   Xutf8SetWMProperties(mydisplay, mywindow, titre, titre, NULL, 0, NULL, NULL, NULL);
+
+  definirIcone();
 
   XSizeHints * contraintes = XAllocSizeHints();
   contraintes->flags = PSize | PMinSize | PBaseSize | PAspect;
