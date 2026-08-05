@@ -9,6 +9,7 @@ add_executable(sudoku
   src/main.cpp
   src/bitmap.cpp
   src/dialog_box.cpp
+  src/encoding.cpp
   src/sudoku_grid.cpp
   src/window.cpp
 )

@@ -7,7 +7,9 @@ extern "C"{
 #include "graphlib.h"
 }
 #include "window.h"
+#include "encoding.h"
 #include <cmath>
+#include <string>
 
 /*
   Graphlib expose les objets X11 qu'elle manipule. On s'en sert pour deux
@@ -82,6 +84,9 @@ void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
   hauteurRef = haut;
 
   ouvrirFenetreTailleTitre(larg, haut, (char *) titre);
+
+  // graphlib sets the title via XSetStandardProperties (Latin-1).
+  Xutf8SetWMProperties(mydisplay, mywindow, titre, titre, NULL, 0, NULL, NULL, NULL);
 
   XSizeHints * contraintes = XAllocSizeHints();
   contraintes->flags = PSize | PMinSize | PBaseSize | PAspect;
@@ -159,5 +164,6 @@ void rectanglePlein(int x1, int y1, int x2, int y2){
 }
 
 void ecrire(int x, int y, const char * texte){
-  ecrireSurImpression(pixX(x), pixY(y), (char *) texte);
+  std::string latin1 = utf8ToLatin1(texte);
+  ecrireSurImpression(pixX(x), pixY(y), (char *) latin1.c_str());
 }
