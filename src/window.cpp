@@ -4,9 +4,9 @@
 //-----------------------------------------------------//
 
 extern "C"{
-#include "lib/graphlib.h"
+#include "graphlib.h"
 }
-#include "Fenetre.h"
+#include "window.h"
 #include <cmath>
 
 /*

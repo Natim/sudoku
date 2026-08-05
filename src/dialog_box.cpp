@@ -1,5 +1,5 @@
-#include "BoiteDialogue.h"
-#include "Fenetre.h"
+#include "dialog_box.h"
+#include "window.h"
 
 static void (*repeindreFond)() = NULL;
 

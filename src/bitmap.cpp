@@ -6,13 +6,13 @@
 // Auteur : Natim
 // Date de dernière modification : 18-04-2006
 //-----------------------------------------------------//
-#include "Bitmap.class.h"
-#include "Fenetre.h"
+#include "bitmap.h"
+#include "window.h"
 #include <cmath>
 #include <cstdlib>
 
 extern "C"{
-#include "lib/graphlib.h"
+#include "graphlib.h"
 }
 
 Bitmap * Bitmap::instances[64];

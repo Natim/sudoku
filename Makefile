@@ -1,27 +1,17 @@
-# Dependances : les en-tetes de developpement X11 (paquet libx11-dev)
+# Thin wrapper around CMake. Requires libx11-dev.
 
-CXX=g++
-CXXFLAGS=-O3 -g -Wall
-LDFLAGS=-Llib
-LDLIBS=-lgraphlib -lX11
+BUILD_DIR ?= build
 
-OBJETS=sudoku.o Bitmap.class.o Sudoku.struct.o BoiteDialogue.o Fenetre.o
+all:
+	cmake -S . -B $(BUILD_DIR) && cmake --build $(BUILD_DIR)
 
-all: sudoku
-
-sudoku: ${OBJETS}
-	${CXX} ${CXXFLAGS} -o $@ $^ ${LDFLAGS} ${LDLIBS}
-
-%.o: %.cpp
-	${CXX} ${CXXFLAGS} -MMD -MP -c $<
-
--include ${OBJETS:.o=.d}
+run: all
+	./$(BUILD_DIR)/sudoku
 
 clean:
-	rm -f *~
-	rm -f *.o *.d
+	cmake --build $(BUILD_DIR) --target clean 2>/dev/null || true
 
-mrproper: clean
-	rm -f sudoku
+mrproper:
+	rm -rf $(BUILD_DIR)
 
-.PHONY: all clean mrproper
+.PHONY: all run clean mrproper

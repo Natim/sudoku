@@ -1,5 +1,5 @@
 extern "C"{
-#include "lib/graphlib.h"
+#include "graphlib.h"
 }
 #include <iostream>
 #include <string>

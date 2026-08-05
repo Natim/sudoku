@@ -1,10 +1,20 @@
 extern "C"{
-#include "lib/graphlib.h"
+#include "graphlib.h"
 }
-#include "Bitmap.class.h"
-#include "Sudoku.struct.h"
-#include "BoiteDialogue.h"
-#include "Fenetre.h"
+#include "bitmap.h"
+#include "sudoku_grid.h"
+#include "dialog_box.h"
+#include "window.h"
+
+#include <string>
+
+#ifndef SUDOKU_ASSETS_DIR
+#define SUDOKU_ASSETS_DIR "assets"
+#endif
+
+static std::string asset(const std::string & nom){
+  return std::string(SUDOKU_ASSETS_DIR) + "/images/" + nom;
+}
 
 // Définition des types //
 typedef struct{
@@ -147,40 +157,40 @@ int main(){
 void alloueBmp(){
   int i;
   char * chemin = new char[255];
-  nouv.up   = new Bitmap("images/new.bmp");
-  nouv.down = new Bitmap("images/newd.bmp");
+  nouv.up   = new Bitmap(asset("new.bmp").c_str());
+  nouv.down = new Bitmap(asset("newd.bmp").c_str());
   nouv.x    = 10;
   nouv.nb   = 10;
 
-  ouvrir.up    = new Bitmap("images/ouvrir.bmp");
-  ouvrir.down  = new Bitmap("images/ouvrird.bmp");
+  ouvrir.up    = new Bitmap(asset("ouvrir.bmp").c_str());
+  ouvrir.down  = new Bitmap(asset("ouvrird.bmp").c_str());
   ouvrir.x     = 50;
   ouvrir.nb   = 10;
   
-  rec.up       = new Bitmap("images/enregistrer.bmp");
-  rec.down     = new Bitmap("images/enregistrerd.bmp");
+  rec.up       = new Bitmap(asset("enregistrer.bmp").c_str());
+  rec.down     = new Bitmap(asset("enregistrerd.bmp").c_str());
   rec.x        = 90;
   rec.nb   = 10;
 
-  aide.up      = new Bitmap("images/aide.bmp");
-  aide.down    = new Bitmap("images/aided.bmp");
+  aide.up      = new Bitmap(asset("aide.bmp").c_str());
+  aide.down    = new Bitmap(asset("aided.bmp").c_str());
   aide.x       = 510;
   aide.nb   = 10;
 
-  fermer.up    = new Bitmap("images/fermer.bmp");
-  fermer.down  = new Bitmap("images/fermerd.bmp");
+  fermer.up    = new Bitmap(asset("fermer.bmp").c_str());
+  fermer.down  = new Bitmap(asset("fermerd.bmp").c_str());
   fermer.x     = 550;
   fermer.nb   = 10;
 
-  erreur.up   = new Bitmap("images/erreur.bmp");
+  erreur.up   = new Bitmap(asset("erreur.bmp").c_str());
 
   b = new Bouton[10];
 
   for(i=0; i < 10; i++){
-    snprintf(chemin, 255, "images/%d.bmp", i);
+    snprintf(chemin, 255, "%s", asset(std::to_string(i) + ".bmp").c_str());
     b[i].up = new Bitmap(chemin);
 
-    snprintf(chemin, 255, "images/%dd.bmp", i);
+    snprintf(chemin, 255, "%s", asset(std::to_string(i) + "d.bmp").c_str());
     b[i].down = new Bitmap(chemin);
 
     b[i].x = 140 + i*36;

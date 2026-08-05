@@ -7,7 +7,7 @@
 // Date de dernière modification : 12-05-2006
 //-----------------------------------------------------//
 
-#include "Sudoku.struct.h"
+#include "sudoku_grid.h"
 
 /***************************
  ** Création de Sudoku de **
