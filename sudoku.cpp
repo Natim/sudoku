@@ -51,8 +51,7 @@ int main(){
   refresh(sudoku);
 
   while(!quitter){
-      attendreClic();
-      // if(testerClic()){
+      // positionSouris() attend elle-même le clic et en fournit la position.
       positionSouris(&x, &y);
       
       if(y >= 7 && y <= 39){ // On est dans la zone du menu
@@ -126,9 +125,6 @@ int main(){
       if(bouton != NULL)
 	bouton->down->affiche(bouton->x, 7);
     }
-    usleep(10000);
-    rafraichirFenetre();
-    // }
 
   desalloueBmp();          // Desalloue les bitmaps
 
