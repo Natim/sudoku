@@ -1,6 +1,6 @@
 //------------------------------------------------------//
 // window.cpp
-// Fenetre redimensionnable a ratio constant pour Graphlib
+// Constant-aspect resizable window wrapper for Graphlib
 //-----------------------------------------------------//
 
 extern "C"{
@@ -17,10 +17,9 @@ extern "C"{
 #include <vector>
 
 /*
-  Graphlib expose les objets X11 qu'elle manipule. On s'en sert pour deux
-  choses qu'elle ne sait pas faire : demander au gestionnaire de fenetres de
-  conserver le ratio, et redimensionner le pixmap de double tampon dans lequel
-  toutes ses primitives dessinent.
+  Graphlib exposes the X11 objects it uses. We rely on them for two things it
+  cannot do: ask the window manager to preserve the aspect ratio, and resize
+  the double-buffer pixmap where all of its drawing primitives render.
 */
 extern "C" {
   extern Display  * mydisplay;
@@ -31,359 +30,357 @@ extern "C" {
   extern int        profondeur;
 }
 
-// Taille de police correspondant a une echelle de 1.
-static const int TAILLE_TEXTE = 12;
+// Font size at a scale factor of 1.
+static const int TEXT_SIZE = 12;
 
-// Duree d'accalmie avant de repeindre : un glissement de souris produit
-// beaucoup plus de ConfigureNotify que le trace ne peut en suivre.
-static const int DELAI_REDIM_MS = 150;
+// Quiet period before repainting: a mouse drag produces far more ConfigureNotify
+// events than drawing can keep up with.
+static const int RESIZE_QUIET_MS = 150;
 
-// Au dela, on renonce a imposer le ratio et on se contente de centrer.
+// Beyond this, stop enforcing the aspect ratio and just center the content.
 static const int MAX_CORRECTIONS = 3;
 
-static const long MASQUE_EVENEMENTS =
+static const long EVENT_MASK =
   KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
   EnterWindowMask | LeaveWindowMask | KeymapStateMask | ExposureMask |
   FocusChangeMask | StructureNotifyMask;
 
-static int largeurRef = 1, hauteurRef = 1;  // taille de la fenetre de reference
-static double facteur = 1.0;                // pixels ecran par unite logique
-static int margeX = 0, margeY = 0;          // centrage si le ratio n'est pas respecte
-static XFontStruct * police = NULL;         // police au facteur courant
+static int refWidth = 1, refHeight = 1;  // reference window size
+static double factor = 1.0;                // screen pixels per logical unit
+static int offsetX = 0, offsetY = 0;       // centering when aspect ratio is off
+static XFontStruct * font = NULL;          // font at the current scale factor
 
-double echelle(){
-  return facteur;
+double scale(){
+  return factor;
 }
 
 int pixX(int x){
-  return margeX + (int) lround(x * facteur);
+  return offsetX + (int) lround(x * factor);
 }
 
 int pixY(int y){
-  return margeY + (int) lround(y * facteur);
+  return offsetY + (int) lround(y * factor);
 }
 
-static int logiqueX(int x){
-  return (int) floor((x - margeX) / facteur);
+static int logicalX(int x){
+  return (int) floor((x - offsetX) / factor);
 }
 
-static int logiqueY(int y){
-  return (int) floor((y - margeY) / facteur);
+static int logicalY(int y){
+  return (int) floor((y - offsetY) / factor);
 }
 
 /*
-  modifierTailleTexte() de graphlib est inutilisable : son motif XLFD omet le
-  champ de largeur moyenne, si bien qu'il ne correspond a aucune police. On
-  charge donc la police nous-memes. Les familles vectorielles du serveur X
-  acceptent n'importe quelle taille en pixels ; les motifs sont essayes dans
-  l'ordre pour s'adapter aux polices reellement installees.
+  Graphlib's modifierTailleTexte() is unusable: its XLFD pattern omits the
+  average-width field, so it matches no font. We load the font ourselves.
+  Vector font families on the X server accept any pixel size; patterns are
+  tried in order to match fonts actually installed on the system.
 */
-static void adapterPolice(){
-  static const char * motifs[] = {
+static void updateFont(){
+  static const char * patterns[] = {
     "-*-times-medium-r-normal--%d-*-*-*-*-*-iso8859-1",
     "-*-helvetica-medium-r-normal--%d-*-*-*-*-*-iso8859-1",
     "-*-fixed-medium-r-normal--%d-*-*-*-*-*-iso8859-1"
   };
 
-  int taille = (int) lround(TAILLE_TEXTE * facteur);
-  if(taille < 1)
-    taille = 1;
+  int size = (int) lround(TEXT_SIZE * factor);
+  if(size < 1)
+    size = 1;
 
-  for(unsigned int i = 0; i < sizeof motifs / sizeof *motifs; i++){
-    char nom[128];
-    snprintf(nom, sizeof nom, motifs[i], taille);
+  for(unsigned int i = 0; i < sizeof patterns / sizeof *patterns; i++){
+    char name[128];
+    snprintf(name, sizeof name, patterns[i], size);
 
-    // XLoadQueryFont renvoie NULL au lieu de declencher une erreur X.
-    XFontStruct * nouvelle = XLoadQueryFont(mydisplay, nom);
-    if(nouvelle == NULL)
+    // XLoadQueryFont returns NULL instead of raising an X error.
+    XFontStruct * loaded = XLoadQueryFont(mydisplay, name);
+    if(loaded == NULL)
       continue;
 
-    XSetFont(mydisplay, mygc, nouvelle->fid);
-    if(police != NULL)
-      XFreeFont(mydisplay, police);
-    police = nouvelle;
+    XSetFont(mydisplay, mygc, loaded->fid);
+    if(font != NULL)
+      XFreeFont(mydisplay, font);
+    font = loaded;
     return;
   }
 }
 
-int largeurTexte(const char * texte){
-  std::string latin1 = utf8ToLatin1(texte);
-  if(police == NULL)
-    return latin1.size() * TAILLE_TEXTE / 2;
-  return (int) lround(XTextWidth(police, latin1.c_str(), latin1.size()) / facteur);
+int textWidth(const char * text){
+  std::string latin1 = utf8ToLatin1(text);
+  if(font == NULL)
+    return latin1.size() * TEXT_SIZE / 2;
+  return (int) lround(XTextWidth(font, latin1.c_str(), latin1.size()) / factor);
 }
 
-static void adapterTaille(int larg, int haut){
-  if(larg <= 0 || haut <= 0)
+static void applySize(int width, int height){
+  if(width <= 0 || height <= 0)
     return;
 
-  double fx = larg / (double) largeurRef;
-  double fy = haut / (double) hauteurRef;
-  facteur = (fx < fy) ? fx : fy;
-  margeX = (larg - (int) lround(largeurRef * facteur)) / 2;
-  margeY = (haut - (int) lround(hauteurRef * facteur)) / 2;
+  double fx = width / (double) refWidth;
+  double fy = height / (double) refHeight;
+  factor = (fx < fy) ? fx : fy;
+  offsetX = (width - (int) lround(refWidth * factor)) / 2;
+  offsetY = (height - (int) lround(refHeight * factor)) / 2;
 
-  // Sans ce nouveau pixmap, les zones reaffichees apres un Expose seraient
-  // tronquees a l'ancienne taille de la fenetre.
+  // Without a new pixmap, areas redrawn after an Expose would be clipped to
+  // the old window size.
   XFreePixmap(mydisplay, dblbuff);
-  dblbuff = XCreatePixmap(mydisplay, mywindow, larg, haut, profondeur);
-  myhint.width  = larg;
-  myhint.height = haut;
+  dblbuff = XCreatePixmap(mydisplay, mywindow, width, height, profondeur);
+  myhint.width  = width;
+  myhint.height = height;
   viderFenetre();
 
-  adapterPolice();
+  updateFont();
 }
 
 /*
-  L'icone est dessinee ici plutot que chargee d'un fichier : le format ARGB
-  attendu par le gestionnaire de fenetres n'a rien de commun avec les bitmaps
-  indexes d'assets/, et une grille se decrit en quelques traits.
+  The icon is drawn here rather than loaded from a file: the ARGB format
+  expected by the window manager has nothing in common with the indexed
+  bitmaps in assets/, and a grid is easy to describe with a few lines.
 
-  Les couleurs sont opaques : la specification ne dit pas si l'alpha est
-  pre-multiplie, et les gestionnaires de fenetres ne s'accordent pas.
+  Colors are opaque: the specification does not say whether alpha is
+  pre-multiplied, and window managers disagree.
 */
-static const long ICONE_FOND  = 0xFFFFFFFF;
-static const long ICONE_TRAIT = 0xFFB4B4B4;
-static const long ICONE_BLOC  = 0xFF23496E;
+static const long ICON_BACKGROUND = 0xFFFFFFFF;
+static const long ICON_LINE       = 0xFFB4B4B4;
+static const long ICON_BLOCK      = 0xFF23496E;
 
-static void barreIcone(long * pixels, int taille,
-		       int x, int y, int larg, int haut, long couleur){
-  for(int j = 0; j < haut; j++)
-    for(int i = 0; i < larg; i++)
-      pixels[(y + j) * taille + x + i] = couleur;
+static void iconBar(long * pixels, int size,
+		    int x, int y, int width, int height, long color){
+  for(int j = 0; j < height; j++)
+    for(int i = 0; i < width; i++)
+      pixels[(y + j) * size + x + i] = color;
 }
 
-static void peindreIcone(long * pixels, int taille){
-  for(int i = 0; i < taille * taille; i++)
-    pixels[i] = ICONE_FOND;
+static void paintIcon(long * pixels, int size){
+  for(int i = 0; i < size * size; i++)
+    pixels[i] = ICON_BACKGROUND;
 
-  // Les deux sortes de traits se distinguent d'abord par leur couleur : aux
-  // petites tailles ils tombent tous a un pixel.
-  int epaisBloc = taille / 32;
-  if(epaisBloc < 1)
-    epaisBloc = 1;
-  int epaisFine = taille / 64;
-  if(epaisFine < 1)
-    epaisFine = 1;
+  // The two line kinds are distinguished first by color: at small sizes they
+  // both collapse to one pixel.
+  int blockThickness = size / 32;
+  if(blockThickness < 1)
+    blockThickness = 1;
+  int fineThickness = size / 64;
+  if(fineThickness < 1)
+    fineThickness = 1;
 
-  // En dessous de 48 pixels, une case fait moins de trois pixels et les neuf
-  // colonnes tournent au gris : on ne garde que les separateurs de blocs.
-  bool lignesFines = (taille >= 48);
+  // Below 48 pixels, a cell is less than three pixels wide and all nine
+  // columns turn gray: keep only the block separators.
+  bool fineLines = (size >= 48);
 
-  // Les traits de bloc sont traces en second pour couvrir les traits fins.
-  for(int passe = 0; passe < 2; passe++){
-    bool blocs = (passe == 1);
-    if(!blocs && !lignesFines)
+  // Block lines are drawn second so they cover the fine lines.
+  for(int pass = 0; pass < 2; pass++){
+    bool blocks = (pass == 1);
+    if(!blocks && !fineLines)
       continue;
 
-    int epais = blocs ? epaisBloc : epaisFine;
-    long couleur = blocs ? ICONE_BLOC : ICONE_TRAIT;
+    int thickness = blocks ? blockThickness : fineThickness;
+    long color = blocks ? ICON_BLOCK : ICON_LINE;
 
     for(int k = 0; k <= 9; k++){
-      if((k % 3 == 0) != blocs)
+      if((k % 3 == 0) != blocks)
 	continue;
-      // Le trait k = 9 doit rester dans l'image, d'ou l'epaisseur retiree.
-      int pos = k * (taille - epais) / 9;
-      barreIcone(pixels, taille, pos, 0, epais, taille, couleur);
-      barreIcone(pixels, taille, 0, pos, taille, epais, couleur);
+      // Line k = 9 must stay inside the image, hence the subtracted thickness.
+      int pos = k * (size - thickness) / 9;
+      iconBar(pixels, size, pos, 0, thickness, size, color);
+      iconBar(pixels, size, 0, pos, size, thickness, color);
     }
   }
 }
 
 /*
-  _NET_WM_ICON est une suite d'images, chacune precedee de sa largeur et de sa
-  hauteur ; le gestionnaire de fenetres retient celle qui approche le mieux la
-  taille dont il a besoin. Les CARD32 d'une propriete de format 32 se passent
-  dans un tableau de long, quelle que soit la taille d'un long.
+  _NET_WM_ICON is a sequence of images, each preceded by its width and height;
+  the window manager keeps the one closest to the size it needs. CARD32 values
+  in a format-32 property are stored in a long array regardless of long size.
 
-  Mutter 18 (GNOME 50) n'expose plus ces pixels a GNOME Shell : la propriete ne
-  sert donc plus rien sous GNOME, mais reste lue par les autres environnements.
-  C'est definirIconeDock() qui donne son icone au dock de GNOME.
+  Mutter 18 (GNOME 50) no longer exposes these pixels to GNOME Shell, so the
+  property is useless under GNOME but still read by other environments.
+  setDockIcon() supplies the icon shown in the GNOME dock.
 */
-static void definirIcone(){
-  static const int tailles[] = { 16, 32, 48, 64, 128 };
+static void setWindowIcon(){
+  static const int sizes[] = { 16, 32, 48, 64, 128 };
 
-  std::vector<long> donnees;
-  for(unsigned int i = 0; i < sizeof tailles / sizeof *tailles; i++){
-    int taille = tailles[i];
-    size_t debut = donnees.size();
-    donnees.resize(debut + 2 + (size_t) taille * taille);
-    donnees[debut]     = taille;
-    donnees[debut + 1] = taille;
-    peindreIcone(&donnees[debut + 2], taille);
+  std::vector<long> data;
+  for(unsigned int i = 0; i < sizeof sizes / sizeof *sizes; i++){
+    int size = sizes[i];
+    size_t start = data.size();
+    data.resize(start + 2 + (size_t) size * size);
+    data[start]     = size;
+    data[start + 1] = size;
+    paintIcon(&data[start + 2], size);
   }
 
   XChangeProperty(mydisplay, mywindow,
 		  XInternAtom(mydisplay, "_NET_WM_ICON", False),
 		  XA_CARDINAL, 32, PropModeReplace,
-		  (const unsigned char *) donnees.data(), (int) donnees.size());
+		  (const unsigned char *) data.data(), (int) data.size());
 }
 
 /*
-  GNOME Shell ne rattache une fenetre a une application, et donc a une icone
-  dans le dock, qu'en comparant son WM_CLASS au StartupWMClass des entrees de
-  bureau installees. Sans WM_CLASS la fenetre reste anonyme et recoit l'icone
-  generique application-x-executable.
+  GNOME Shell associates a window with an application, and therefore a dock
+  icon, only by comparing its WM_CLASS to the StartupWMClass of installed
+  desktop entries. Without WM_CLASS the window stays anonymous and gets the
+  generic application-x-executable icon.
 
-  La classe doit rester identique au StartupWMClass de
+  The class must stay identical to the StartupWMClass in
   packaging/sudoku.desktop.in.
 */
-static void definirIconeDock(){
-  XClassHint * classe = XAllocClassHint();
-  classe->res_name  = (char *) "sudoku";
-  classe->res_class = (char *) "Sudoku";
-  XSetClassHint(mydisplay, mywindow, classe);
-  XFree(classe);
+static void setDockIcon(){
+  XClassHint * hint = XAllocClassHint();
+  hint->res_name  = (char *) "sudoku";
+  hint->res_class = (char *) "Sudoku";
+  XSetClassHint(mydisplay, mywindow, hint);
+  XFree(hint);
 }
 
-void ouvrirFenetreAdaptable(int larg, int haut, const char * titre){
-  largeurRef = larg;
-  hauteurRef = haut;
+void openScalableWindow(int width, int height, const char * title){
+  refWidth = width;
+  refHeight = height;
 
-  ouvrirFenetreTailleTitre(larg, haut, (char *) titre);
+  ouvrirFenetreTailleTitre(width, height, (char *) title);
 
   // graphlib sets the title via XSetStandardProperties (Latin-1).
-  Xutf8SetWMProperties(mydisplay, mywindow, titre, titre, NULL, 0, NULL, NULL, NULL);
+  Xutf8SetWMProperties(mydisplay, mywindow, title, title, NULL, 0, NULL, NULL, NULL);
 
-  definirIconeDock();
-  definirIcone();
+  setDockIcon();
+  setWindowIcon();
 
-  XSizeHints * contraintes = XAllocSizeHints();
-  contraintes->flags = PSize | PMinSize | PBaseSize | PAspect;
-  contraintes->width  = larg;
-  contraintes->height = haut;
-  contraintes->min_width  = largeurRef / 4;
-  contraintes->min_height = hauteurRef / 4;
-  // Les ratios s'appliquent a la taille diminuee de la taille de base.
-  contraintes->base_width = contraintes->base_height = 0;
-  contraintes->min_aspect.x = contraintes->max_aspect.x = larg;
-  contraintes->min_aspect.y = contraintes->max_aspect.y = haut;
-  XSetWMNormalHints(mydisplay, mywindow, contraintes);
-  XFree(contraintes);
+  XSizeHints * hints = XAllocSizeHints();
+  hints->flags = PSize | PMinSize | PBaseSize | PAspect;
+  hints->width  = width;
+  hints->height = height;
+  hints->min_width  = refWidth / 4;
+  hints->min_height = refHeight / 4;
+  // Aspect ratios apply to the size minus the base size.
+  hints->base_width = hints->base_height = 0;
+  hints->min_aspect.x = hints->max_aspect.x = width;
+  hints->min_aspect.y = hints->max_aspect.y = height;
+  XSetWMNormalHints(mydisplay, mywindow, hints);
+  XFree(hints);
 
-  // Graphlib n'ecoute pas les ConfigureNotify.
-  XSelectInput(mydisplay, mywindow, MASQUE_EVENEMENTS);
+  // Graphlib does not listen for ConfigureNotify.
+  XSelectInput(mydisplay, mywindow, EVENT_MASK);
 
-  adapterTaille(larg, haut);
+  applySize(width, height);
 }
 
-// Attend un evenement, au plus delaiMs millisecondes.
-static bool attendreEvenement(int delaiMs){
+// Wait for an event, at most timeoutMs milliseconds.
+static bool waitForEvent(int timeoutMs){
   if(XPending(mydisplay))
     return true;
 
   int fd = ConnectionNumber(mydisplay);
-  fd_set lecture;
-  FD_ZERO(&lecture);
-  FD_SET(fd, &lecture);
+  fd_set readSet;
+  FD_ZERO(&readSet);
+  FD_SET(fd, &readSet);
 
-  struct timeval delai;
-  delai.tv_sec  = delaiMs / 1000;
-  delai.tv_usec = (delaiMs % 1000) * 1000;
+  struct timeval timeout;
+  timeout.tv_sec  = timeoutMs / 1000;
+  timeout.tv_usec = (timeoutMs % 1000) * 1000;
 
-  return select(fd + 1, &lecture, NULL, NULL, &delai) > 0;
+  return select(fd + 1, &readSet, NULL, NULL, &timeout) > 0;
 }
 
 /*
-  Taille la plus proche respectant le ratio de reference. On suit l'axe que
-  l'utilisateur a le plus deplace, sinon tirer un bord horizontal annulerait
-  son geste en ramenant la fenetre a sa largeur d'origine.
+  Closest size that respects the reference aspect ratio. Follow the axis the
+  user moved most; otherwise dragging a horizontal edge would cancel the
+  gesture by snapping the window back to its original width.
 */
-static void tailleAuRatio(int larg, int haut, int * cibleL, int * cibleH){
+static void sizeForAspect(int width, int height, int * targetW, int * targetH){
   double f;
-  if(abs(larg - myhint.width) >= abs(haut - myhint.height))
-    f = larg / (double) largeurRef;
+  if(abs(width - myhint.width) >= abs(height - myhint.height))
+    f = width / (double) refWidth;
   else
-    f = haut / (double) hauteurRef;
+    f = height / (double) refHeight;
 
-  int l = (int) lround(largeurRef * f);
-  int h = (int) lround(hauteurRef * f);
+  int w = (int) lround(refWidth * f);
+  int h = (int) lround(refHeight * f);
 
-  // Rester au dessus du minimum annonce, sinon le gestionnaire de fenetres
-  // corrigerait a son tour et on repartirait pour un tour.
-  if(l < largeurRef / 4 || h < hauteurRef / 4){
-    l = largeurRef / 4;
-    h = hauteurRef / 4;
+  // Stay above the advertised minimum, otherwise the window manager would
+  // correct again and we would loop.
+  if(w < refWidth / 4 || h < refHeight / 4){
+    w = refWidth / 4;
+    h = refHeight / 4;
   }
 
-  *cibleL = l;
-  *cibleH = h;
+  *targetW = w;
+  *targetH = h;
 }
 
-bool attendreClicLogique(int * x, int * y){
-  bool aRafraichir = false;
+bool waitForLogicalClick(int * x, int * y){
+  bool needsRefresh = false;
   int corrections  = 0;
-  int largeurVoulue = myhint.width, hauteurVoulue = myhint.height;
+  int desiredWidth = myhint.width, desiredHeight = myhint.height;
 
   for(;;){
-    bool aRedimensionner = (largeurVoulue != myhint.width ||
-			    hauteurVoulue != myhint.height);
+    bool needsResize = (desiredWidth != myhint.width ||
+			desiredHeight != myhint.height);
 
     if(!XPending(mydisplay)){
-      if(aRedimensionner){
-	// Un glissement de souris enchaine les ConfigureNotify : on attend
-	// une accalmie pour ne repeindre qu'une fois, a la taille finale.
-	if(!attendreEvenement(DELAI_REDIM_MS)){
-	  int cibleL, cibleH;
-	  tailleAuRatio(largeurVoulue, hauteurVoulue, &cibleL, &cibleH);
+      if(needsResize){
+	// A mouse drag chains ConfigureNotify events: wait for a pause so we
+	// repaint only once, at the final size.
+	if(!waitForEvent(RESIZE_QUIET_MS)){
+	  int targetW, targetH;
+	  sizeForAspect(desiredWidth, desiredHeight, &targetW, &targetH);
 
-	  // PAspect n'est pas toujours applique lors d'un redimensionnement
-	  // a la souris : on rectifie une fois le geste termine.
-	  if((cibleL != largeurVoulue || cibleH != hauteurVoulue) &&
+	  // PAspect is not always applied during a mouse resize: correct once
+	  // the gesture is finished.
+	  if((targetW != desiredWidth || targetH != desiredHeight) &&
 	     corrections < MAX_CORRECTIONS){
 	    corrections++;
-	    XResizeWindow(mydisplay, mywindow, cibleL, cibleH);
+	    XResizeWindow(mydisplay, mywindow, targetW, targetH);
 	    continue;
 	  }
 
-	  adapterTaille(largeurVoulue, hauteurVoulue);
+	  applySize(desiredWidth, desiredHeight);
 	  return false;
 	}
-      }else if(aRafraichir){
+      }else if(needsRefresh){
 	rafraichirFenetre();
-	aRafraichir = false;
+	needsRefresh = false;
       }
     }
 
-    XEvent evenement;
-    XNextEvent(mydisplay, &evenement);
+    XEvent event;
+    XNextEvent(mydisplay, &event);
 
-    switch(evenement.type){
+    switch(event.type){
     case ButtonPress:
-      if(aRedimensionner){
-	XPutBackEvent(mydisplay, &evenement);
-	adapterTaille(largeurVoulue, hauteurVoulue);
+      if(needsResize){
+	XPutBackEvent(mydisplay, &event);
+	applySize(desiredWidth, desiredHeight);
 	return false;
       }
-      *x = logiqueX(evenement.xbutton.x);
-      *y = logiqueY(evenement.xbutton.y);
+      *x = logicalX(event.xbutton.x);
+      *y = logicalY(event.xbutton.y);
       return true;
 
     case ConfigureNotify:
-      largeurVoulue = evenement.xconfigure.width;
-      hauteurVoulue = evenement.xconfigure.height;
+      desiredWidth = event.xconfigure.width;
+      desiredHeight = event.xconfigure.height;
       break;
 
     case Expose:
-      aRafraichir = true;
+      needsRefresh = true;
       break;
     }
   }
 }
 
-void ligne(int x1, int y1, int x2, int y2){
+void drawLine(int x1, int y1, int x2, int y2){
   tracerLigne(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
 }
 
-void rectangle(int x1, int y1, int x2, int y2){
+void drawRect(int x1, int y1, int x2, int y2){
   tracerRectangle(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
 }
 
-void rectanglePlein(int x1, int y1, int x2, int y2){
+void fillRect(int x1, int y1, int x2, int y2){
   remplirRectangle(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
 }
 
-void ecrire(int x, int y, const char * texte){
-  std::string latin1 = utf8ToLatin1(texte);
+void drawText(int x, int y, const char * text){
+  std::string latin1 = utf8ToLatin1(text);
   ecrireSurImpression(pixX(x), pixY(y), (char *) latin1.c_str());
 }

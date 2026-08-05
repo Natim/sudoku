@@ -6,6 +6,6 @@ Exec=@SUDOKU_EXEC@
 Icon=@SUDOKU_ICON@
 Terminal=false
 Categories=Game;LogicGame;
-# Doit rester identique a la classe posee par definirIconeDock() dans window.cpp :
-# c'est par ce nom que GNOME Shell reconnait la fenetre comme etant la notre.
+# Must stay identical to the class set by setDockIcon() in window.cpp:
+# GNOME Shell matches the window to our application by this name.
 StartupWMClass=Sudoku

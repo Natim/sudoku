@@ -10,113 +10,113 @@ extern "C"{
 
 using namespace std;
 
-static void (*repeindreFond)() = NULL;
+static void (*repaintBackground)() = NULL;
 
-struct ZoneBouton {
+struct ButtonArea {
   int x1, y1, x2, y2;
 };
 
-void definirRepeindreFond(void (*peindre)()){
-  repeindreFond = peindre;
+void setBackgroundRepaint(void (*paint)()){
+  repaintBackground = paint;
 }
 
-static vector<ZoneBouton> disposerBoutons(int x, int y, int largeur, int hauteur,
-					  const vector<string> & libelles){
-  const int marge = 10;
-  const int y1 = y + hauteur - 30;
-  const int y2 = y + hauteur - 10;
-  const int inter = 8;
+static vector<ButtonArea> layoutButtons(int x, int y, int width, int height,
+					  const vector<string> & labels){
+  const int margin = 10;
+  const int y1 = y + height - 30;
+  const int y2 = y + height - 10;
+  const int gap = 8;
 
-  vector<int> largeurs;
-  largeurs.reserve(libelles.size());
+  vector<int> widths;
+  widths.reserve(labels.size());
   int total = 0;
-  for(unsigned int i = 0; i < libelles.size(); i++){
-    int larg = largeurTexte(libelles[i].c_str()) + 16;
-    if(larg < 30)
-      larg = 30;
-    largeurs.push_back(larg);
-    total += larg;
+  for(unsigned int i = 0; i < labels.size(); i++){
+    int w = textWidth(labels[i].c_str()) + 16;
+    if(w < 30)
+      w = 30;
+    widths.push_back(w);
+    total += w;
   }
-  if(!libelles.empty())
-    total += inter * ((int) libelles.size() - 1);
+  if(!labels.empty())
+    total += gap * ((int) labels.size() - 1);
 
-  int debut = x + marge;
-  if(debut + total < x + largeur - marge)
-    debut = x + (largeur - total) / 2;
+  int start = x + margin;
+  if(start + total < x + width - margin)
+    start = x + (width - total) / 2;
 
-  vector<ZoneBouton> zones;
-  int courant = debut;
-  for(unsigned int i = 0; i < libelles.size(); i++){
-    ZoneBouton zone;
-    zone.x1 = courant;
-    zone.y1 = y1;
-    zone.x2 = courant + largeurs[i];
-    zone.y2 = y2;
-    zones.push_back(zone);
-    courant += largeurs[i] + inter;
+  vector<ButtonArea> areas;
+  int current = start;
+  for(unsigned int i = 0; i < labels.size(); i++){
+    ButtonArea area;
+    area.x1 = current;
+    area.y1 = y1;
+    area.x2 = current + widths[i];
+    area.y2 = y2;
+    areas.push_back(area);
+    current += widths[i] + gap;
   }
-  return zones;
+  return areas;
 }
 
-static void dessinerBoite(int x, int y, int largeur, int hauteur,
-			  const string & message, const string & titre,
-			  const vector<string> & libelles){
+static void drawBox(int x, int y, int width, int height,
+		    const string & message, const string & title,
+		    const vector<string> & labels){
   initPalette(NULL, 0);
 
   modifierCouleur(20);
-  rectanglePlein(x, y, x + largeur, y + hauteur);
+  fillRect(x, y, x + width, y + height);
 
   modifierCouleur(238);
-  rectanglePlein(x, y, x + largeur, y + 20);
+  fillRect(x, y, x + width, y + 20);
   modifierCouleur(1);
-  const int largeurTitre = largeurTexte(titre.c_str());
-  const int debutTitre   = x + (largeur - largeurTitre) / 2;
-  ecrire(debutTitre, y + 15, titre.c_str());
-  ligne(debutTitre, y + 17, debutTitre + largeurTitre, y + 17);
+  const int titleWidth = textWidth(title.c_str());
+  const int titleStart = x + (width - titleWidth) / 2;
+  drawText(titleStart, y + 15, title.c_str());
+  drawLine(titleStart, y + 17, titleStart + titleWidth, y + 17);
 
   modifierCouleur(1);
-  ecrire(x + 20, y + 45, message.c_str());
+  drawText(x + 20, y + 45, message.c_str());
 
-  vector<ZoneBouton> zones = disposerBoutons(x, y, largeur, hauteur, libelles);
-  for(unsigned int i = 0; i < libelles.size(); i++){
+  vector<ButtonArea> areas = layoutButtons(x, y, width, height, labels);
+  for(unsigned int i = 0; i < labels.size(); i++){
     modifierCouleur(1);
-    rectangle(zones[i].x1, zones[i].y1, zones[i].x2, zones[i].y2);
-    const int largeurLib = largeurTexte(libelles[i].c_str());
-    const int texteX = zones[i].x1 + (zones[i].x2 - zones[i].x1 - largeurLib) / 2;
-    ecrire(texteX, zones[i].y2 - 5, libelles[i].c_str());
+    drawRect(areas[i].x1, areas[i].y1, areas[i].x2, areas[i].y2);
+    const int labelWidth = textWidth(labels[i].c_str());
+    const int textX = areas[i].x1 + (areas[i].x2 - areas[i].x1 - labelWidth) / 2;
+    drawText(textX, areas[i].y2 - 5, labels[i].c_str());
   }
 
   modifierCouleur(0);
-  rectangle(x, y, x + largeur, y + hauteur);
-  rectangle(x, y + 20, x + largeur, y + hauteur);
+  drawRect(x, y, x + width, y + height);
+  drawRect(x, y + 20, x + width, y + height);
 }
 
-static int boutonClique(int X, int Y, const vector<ZoneBouton> & zones){
-  for(unsigned int i = 0; i < zones.size(); i++){
-    if(X > zones[i].x1 && X < zones[i].x2 &&
-       Y > zones[i].y1 && Y < zones[i].y2)
+static int clickedButton(int X, int Y, const vector<ButtonArea> & areas){
+  for(unsigned int i = 0; i < areas.size(); i++){
+    if(X > areas[i].x1 && X < areas[i].x2 &&
+       Y > areas[i].y1 && Y < areas[i].y2)
       return (int) i;
   }
   return -1;
 }
 
-int choisir(int x, int y, int largeur, int hauteur,
-	    string titre, string message,
-	    const vector<string> & choix){
+int choose(int x, int y, int width, int height,
+	   string title, string message,
+	   const vector<string> & choices){
   int X, Y;
-  vector<ZoneBouton> zones = disposerBoutons(x, y, largeur, hauteur, choix);
-  dessinerBoite(x, y, largeur, hauteur, message, titre, choix);
+  vector<ButtonArea> areas = layoutButtons(x, y, width, height, choices);
+  drawBox(x, y, width, height, message, title, choices);
 
   while(true){
-    if(!attendreClicLogique(&X, &Y)){
-      if(repeindreFond != NULL)
-	repeindreFond();
-      zones = disposerBoutons(x, y, largeur, hauteur, choix);
-      dessinerBoite(x, y, largeur, hauteur, message, titre, choix);
+    if(!waitForLogicalClick(&X, &Y)){
+      if(repaintBackground != NULL)
+	repaintBackground();
+      areas = layoutButtons(x, y, width, height, choices);
+      drawBox(x, y, width, height, message, title, choices);
       continue;
     }
 
-    int idx = boutonClique(X, Y, zones);
+    int idx = clickedButton(X, Y, areas);
     if(idx >= 0)
       return idx;
   }
@@ -126,13 +126,13 @@ bool alert(int x, int y, string message){
   return alert(x, y, "/!\\ Attention /!\\", message);
 }
 
-bool alert(int x, int y, string titre, string message){
-  return alert(x, y, 300, 100, message, titre);
+bool alert(int x, int y, string title, string message){
+  return alert(x, y, 300, 100, title, message);
 }
 
-bool alert(int x, int y, int largeur, int hauteur, string message, string titre){
-  vector<string> boutons;
-  boutons.push_back("Oui");
-  boutons.push_back("Non");
-  return choisir(x, y, largeur, hauteur, titre, message, boutons) == 0;
+bool alert(int x, int y, int width, int height, string title, string message){
+  vector<string> buttons;
+  buttons.push_back("Oui");
+  buttons.push_back("Non");
+  return choose(x, y, width, height, title, message, buttons) == 0;
 }

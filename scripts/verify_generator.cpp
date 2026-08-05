@@ -1,88 +1,88 @@
-// Controle temporaire du generateur : regles, unicite, alea.
+// Temporary generator checks: rules, uniqueness, randomness.
 #include "generator.h"
-#include "alea.h"
+#include "random.h"
 #include "sudoku_grid.h"
 
 #include <chrono>
 #include <cstdio>
 #include <set>
 
-static bool reglesRespectees(const Sudoku & s){
-  for(int i = 0; i < TAILLE; i++){
-    for(int j = 0; j < TAILLE; j++){
-      int nb = s.grille[i][j];
-      if(nb == 0)
+static bool followsRules(const Sudoku & s){
+  for(int i = 0; i < SIZE; i++){
+    for(int j = 0; j < SIZE; j++){
+      int value = s.cells[i][j];
+      if(value == 0)
 	continue;
-      Sudoku copie = s;
-      if(!tester(copie, i, j))
+      Sudoku copy = s;
+      if(!checkCell(copy, i, j))
 	return false;
     }
   }
   return true;
 }
 
-static int compterIndices(const Sudoku & s){
-  int nb = 0;
-  for(int i = 0; i < TAILLE; i++)
-    for(int j = 0; j < TAILLE; j++)
-      if(s.grille[i][j] != 0)
-	nb++;
-  return nb;
+static int countClues(const Sudoku & s){
+  int count = 0;
+  for(int i = 0; i < SIZE; i++)
+    for(int j = 0; j < SIZE; j++)
+      if(s.cells[i][j] != 0)
+	count++;
+  return count;
 }
 
-static void testerNiveau(Difficulte niveau, int cible, int essais){
-  printf("Niveau %d (%d essais)\n", (int) niveau, essais);
-  for(int i = 0; i < essais; i++){
-    auto debut = std::chrono::steady_clock::now();
-    Sudoku s = genererGrille(niveau);
-    auto fin = std::chrono::steady_clock::now();
-    double ms = std::chrono::duration<double, std::milli>(fin - debut).count();
+static void checkLevel(Difficulty level, int target, int attempts){
+  printf("Level %d (%d attempts)\n", (int) level, attempts);
+  for(int i = 0; i < attempts; i++){
+    auto start = std::chrono::steady_clock::now();
+    Sudoku s = generateGrid(level);
+    auto end = std::chrono::steady_clock::now();
+    double ms = std::chrono::duration<double, std::milli>(end - start).count();
 
-    int indices = compterIndices(s);
-    int solutions = compterSolutions(s, 2);
-    bool regles = reglesRespectees(s);
+    int clues = countClues(s);
+    int solutions = countSolutions(s, 2);
+    bool rules = followsRules(s);
 
-    printf("  essai %d : %d indices, %d solution(s), regles=%s, %.1f ms\n",
-	   i + 1, indices, solutions, regles ? "ok" : "KO", ms);
+    printf("  attempt %d: %d clues, %d solution(s), rules=%s, %.1f ms\n",
+	   i + 1, clues, solutions, rules ? "ok" : "fail", ms);
 
-    if(!regles || solutions != 1){
-      afficherSudoku(s);
+    if(!rules || solutions != 1){
+      displaySudoku(s);
       return;
     }
-    if(indices > cible + 5)
-      printf("  (avertissement : au-dessus de la cible %d)\n", cible);
+    if(clues > target + 5)
+      printf("  (warning: above target %d)\n", target);
   }
 }
 
-static void testerHasard(){
-  std::set<int> vus;
+static void checkRandom(){
+  std::set<int> seen;
   for(int i = 0; i < 500; i++){
-    int v = hasard(8);
+    int v = randomInt(8);
     if(v < 0 || v > 8){
-      printf("hasard(8) hors bornes : %d\n", v);
+      printf("randomInt(8) out of range: %d\n", v);
       return;
     }
-    vus.insert(v);
+    seen.insert(v);
   }
-  printf("hasard(8) couvre %zu valeurs sur 9\n", vus.size());
+  printf("randomInt(8) covers %zu values out of 9\n", seen.size());
 }
 
-static void testerDiversite(){
-  Sudoku a = genererGrille(MOYEN);
-  Sudoku b = genererGrille(MOYEN);
-  bool identiques = true;
-  for(int i = 0; i < TAILLE && identiques; i++)
-    for(int j = 0; j < TAILLE && identiques; j++)
-      if(a.grille[i][j] != b.grille[i][j])
-	identiques = false;
-  printf("deux grilles moyennes identiques : %s\n", identiques ? "oui" : "non");
+static void checkDiversity(){
+  Sudoku a = generateGrid(MEDIUM);
+  Sudoku b = generateGrid(MEDIUM);
+  bool identical = true;
+  for(int i = 0; i < SIZE && identical; i++)
+    for(int j = 0; j < SIZE && identical; j++)
+      if(a.cells[i][j] != b.cells[i][j])
+	identical = false;
+  printf("two medium grids identical: %s\n", identical ? "yes" : "no");
 }
 
 int main(){
-  testerHasard();
-  testerDiversite();
-  testerNiveau(FACILE, 45, 3);
-  testerNiveau(MOYEN, 34, 3);
-  testerNiveau(DIFFICILE, 28, 3);
+  checkRandom();
+  checkDiversity();
+  checkLevel(EASY, 45, 3);
+  checkLevel(MEDIUM, 34, 3);
+  checkLevel(HARD, 28, 3);
   return 0;
 }

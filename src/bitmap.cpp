@@ -1,10 +1,9 @@
 //------------------------------------------------------//
-// Bitmap.class.cpp
-// Class Bitmap pour ouvrir un bitmap et l'afficher 
-// Avec Graphlib
+// bitmap.cpp
+// Bitmap class to load and display 8-bit BMP files with Graphlib
 //-----------------------------------------------------//
-// Auteur : Natim
-// Date de dernière modification : 18-04-2006
+// Author: Natim
+// Last modified: 18-04-2006
 //-----------------------------------------------------//
 #include "bitmap.h"
 #include "window.h"
@@ -20,235 +19,210 @@ extern "C"{
 using namespace std;
 
 Bitmap * Bitmap::instances[64];
-int Bitmap::nbInstances = 0;
+int Bitmap::instanceCount = 0;
 
-// Constructeur de base
 Bitmap::Bitmap(){
-  couleurs = NULL;
-  donnees  = NULL;
-  pal      = NULL;
+  colors = NULL;
+  data  = NULL;
+  palette = NULL;
   width = height = 0;
-  copieX = copieY = -1;
-  copieL = copieH = 0;
-  indexBlanc = indexNoir = 0;
-  enregistrer();
+  cacheX = cacheY = -1;
+  cacheWidth = cacheHeight = 0;
+  whiteIndex = blackIndex = 0;
+  registerInstance();
 }
 
-// Constructeur permettant de charger un fichier
 Bitmap::Bitmap(const char *file){
-  couleurs = NULL;
-  donnees  = NULL;
-  pal      = NULL;
-  copieX = copieY = -1;
-  copieL = copieH = 0;
-  indexBlanc = indexNoir = 0;
+  colors = NULL;
+  data  = NULL;
+  palette = NULL;
+  cacheX = cacheY = -1;
+  cacheWidth = cacheHeight = 0;
+  whiteIndex = blackIndex = 0;
   loadBMP(file);
-  enregistrer();
+  registerInstance();
 }
 
-// Destructeur de la classe
 Bitmap::~Bitmap(){
-  desenregistrer();
-  if(couleurs != NULL) {
-    delete[] couleurs;
+  unregisterInstance();
+  if(colors != NULL) {
+    delete[] colors;
   }
-  if(donnees  != NULL) {
-    delete[] donnees;
+  if(data  != NULL) {
+    delete[] data;
   }
-  if(pal  != NULL){
-    delete[] pal;
+  if(palette  != NULL){
+    delete[] palette;
   }
 }
 
-void Bitmap::enregistrer(){
-  if(nbInstances < 64)
-    instances[nbInstances++] = this;
+void Bitmap::registerInstance(){
+  if(instanceCount < 64)
+    instances[instanceCount++] = this;
 }
 
-void Bitmap::desenregistrer(){
-  for(int i = 0; i < nbInstances; i++){
+void Bitmap::unregisterInstance(){
+  for(int i = 0; i < instanceCount; i++){
     if(instances[i] == this){
-      instances[i] = instances[--nbInstances];
+      instances[i] = instances[--instanceCount];
       return;
     }
   }
 }
 
-// Les copies de reference sont reperees en pixels ecran, pas en coordonnees
-// logiques : leur taille depend de l'echelle en cours.
-void Bitmap::invaliderPixels(int x1, int y1, int x2, int y2){
-  for(int i = 0; i < nbInstances; i++){
+// Reference copies are tracked in screen pixels, not logical coordinates:
+// their size depends on the current scale factor.
+void Bitmap::invalidatePixels(int x1, int y1, int x2, int y2){
+  for(int i = 0; i < instanceCount; i++){
     Bitmap * bmp = instances[i];
-    if(bmp->copieX < 0)
+    if(bmp->cacheX < 0)
       continue;
-    if(bmp->copieX + bmp->copieL > x1 && bmp->copieX < x2 &&
-       bmp->copieY + bmp->copieH > y1 && bmp->copieY < y2)
-      bmp->copieX = bmp->copieY = -1;
+    if(bmp->cacheX + bmp->cacheWidth > x1 && bmp->cacheX < x2 &&
+       bmp->cacheY + bmp->cacheHeight > y1 && bmp->cacheY < y2)
+      bmp->cacheX = bmp->cacheY = -1;
   }
 }
 
-void Bitmap::invaliderZone(int x1, int y1, int x2, int y2){
-  invaliderPixels(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
+void Bitmap::invalidateArea(int x1, int y1, int x2, int y2){
+  invalidatePixels(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
 }
 
-void Bitmap::invaliderTout(){
-  for(int i = 0; i < nbInstances; i++){
-    instances[i]->copieX = -1;
-    instances[i]->copieY = -1;
+void Bitmap::invalidateAll(){
+  for(int i = 0; i < instanceCount; i++){
+    instances[i]->cacheX = -1;
+    instances[i]->cacheY = -1;
   }
 }
 
-// Charge un fichier bitmap d'un fichier dans la mémoire
 bool Bitmap::loadBMP(const char *file) {
-  FILE * in = NULL;             // Descripteur de l'image à lire
-  nom = file;            // Stockage du nom du fichier
-  
-  // On verifie qu'une image n'a pas déjà été chargée dans cette instance
-  delete[] couleurs;
-  couleurs = NULL;
-  delete[] donnees;
-  donnees  = NULL;
-  delete[] pal;
-  pal      = NULL;
-  
-  // On ouvre le fichier en lecture binaire
+  FILE * in = NULL;
+  name = file;
+
+  delete[] colors;
+  colors = NULL;
+  delete[] data;
+  data  = NULL;
+  delete[] palette;
+  palette = NULL;
+
   in = fopen(file, "rb");
-  
-  // Si la lecture n'a pas fonctionnée, on returne un signal d'erreur
+
   if(in == NULL) {
-    cerr << "Impossible d'ouvrir le fichier " << file << endl;
+    cerr << "Cannot open file " << file << endl;
     return false;
   }
-  
-  // On lit l'integralité de l'entete du fichier bitmap
+
   if(fread(&bmfh, sizeof(BitmapFileHeader), 1, in) != 1) {
-    cerr << "Entete de fichier illisible dans " << file << endl;
+    cerr << "Unreadable file header in " << file << endl;
     fclose(in);
     return false;
   }
-  
-  // On verifie que le BitMap est bien au format DIB
+
   if(bmfh.bfType != BITMAP_MAGIC_NUMBER) {
-    cerr << "Ce fichier n'est pas au format DIB";
+    cerr << "This file is not in DIB format";
     fclose(in);
     return false;
   }
-  
-  // On lit les informations d'entête
+
   if(fread(&bmih, sizeof(BitmapInfoHeader), 1, in) != 1) {
-    cerr << "Entete bitmap illisible dans " << file << endl;
+    cerr << "Unreadable bitmap header in " << file << endl;
     fclose(in);
     return false;
   }
-  
-  // On sauvegarde la largeur, hauteur et resolution du fichier bitmap
+
   width  = bmih.biWidth;
   height = bmih.biHeight;
   bpp    = bmih.biBitCount;
 
-  cerr << nom << "\t:\t" << width << "x" << height << " - " << bpp << "bits" << endl;
+  cerr << name << "\t:\t" << width << "x" << height << " - " << bpp << "bits" << endl;
 
+  dataSize = (width * height * (unsigned int) ceil(bpp/8.0));
 
-  // On calcule la taille des données avec la résolution
-  tailleDonnees = (width * height * (unsigned int) ceil(bpp/8.0));
-  
-  // On déduit le nombre de couleurs
-  nbCouleurs = (bmih.biClrUsed != 0) ? bmih.biClrUsed : 256;
+  colorCount = (bmih.biClrUsed != 0) ? bmih.biClrUsed : 256;
 
-  // Si le fichier n'est pas en 8 bits par pixel, on ne sait pas le lire
   if(bpp > 8) {
-    cerr << "On ne sait lire que les fichiers bitmap d'au plus 8 bits" << endl;
+    cerr << "Only bitmaps of at most 8 bits are supported" << endl;
     fclose(in);
     exit(1);
     return false;
   }
-  // Chargement de la palette
-  pal = new unsigned char[nbCouleurs*3];
-  couleurs = new RVBCoul[nbCouleurs];
 
-  // Le format est en BVR. On lit chaque couleurs
-  if(fread(couleurs, sizeof(RVBCoul), nbCouleurs, in) != (size_t) nbCouleurs) {
-    cerr << "Palette illisible dans " << file << endl;
+  palette = new unsigned char[colorCount*3];
+  colors = new RgbColor[colorCount];
+
+  if(fread(colors, sizeof(RgbColor), colorCount, in) != (size_t) colorCount) {
+    cerr << "Unreadable palette in " << file << endl;
     fclose(in);
     return false;
   }
 
-  // On crée la palette graphlib en RVB
-  int sommeMax = -1, sommeMin = 3 * 255 + 1;
-  indexBlanc = indexNoir = 0;
-  for(int i = 0; i < nbCouleurs; i++){
-    pal[i*3]   = couleurs[i].rvbRouge;
-    pal[i*3+1] = couleurs[i].rvbVert;
-    pal[i*3+2] = couleurs[i].rvbBleu;
-    //    pal[i*4+3] = couleurs[i].rvbReserve;
+  int maxSum = -1, minSum = 3 * 255 + 1;
+  whiteIndex = blackIndex = 0;
+  for(int i = 0; i < colorCount; i++){
+    palette[i*3]   = colors[i].red;
+    palette[i*3+1] = colors[i].green;
+    palette[i*3+2] = colors[i].blue;
 
-    int somme = pal[i*3] + pal[i*3+1] + pal[i*3+2];
-    if(somme > sommeMax){
-      sommeMax = somme;
-      indexBlanc = i;
+    int sum = palette[i*3] + palette[i*3+1] + palette[i*3+2];
+    if(sum > maxSum){
+      maxSum = sum;
+      whiteIndex = i;
     }
-    if(somme < sommeMin){
-      sommeMin = somme;
-      indexNoir = i;
+    if(sum < minSum){
+      minSum = sum;
+      blackIndex = i;
     }
   }
-  
-  // On alloue un tableau pour charger l'image
-  donnees = new char[tailleDonnees];
-  
-  // On verifie que l'allocation s'est bien passée
-  if(donnees == NULL) {
-    cerr << "Pas assez de mémoire pour charger le fichier" << endl;
+
+  data = new char[dataSize];
+
+  if(data == NULL) {
+    cerr << "Not enough memory to load the file" << endl;
     fclose(in);
     return false;
   }
-  
+
   fseek(in, bmfh.bfOffBits, SEEK_SET);
-  // On charge l'image
-  if(fread(donnees, sizeof(char), tailleDonnees, in) != tailleDonnees) {
-    cerr << "Donnees d'image illisibles dans " << file << endl;
+  if(fread(data, sizeof(char), dataSize, in) != dataSize) {
+    cerr << "Unreadable image data in " << file << endl;
     fclose(in);
     return false;
   }
-  
-  // On ferme le fichier car on a fini
+
   fclose(in);
-  // On calcule la taille finale de l'image en bits
   byteWidth = padWidth = (unsigned int)(width * ceil(bpp / 8.0));
-  
-  // Ajustage du padding si necessaire
+
   while(padWidth%4 != 0) {
     padWidth++;
   }
-  
-  // Tout c'est bien passé
+
   return true;
 }
 
-/* Dessine l'image, en pixels ecran, dans le rectangle larg x haut : chaque
-   pixel du fichier devient un bloc, ce qui met l'image a l'echelle de la
-   fenetre. Les bornes sont calculees de proche en proche pour que les blocs
-   pavent exactement le rectangle, sans trou ni recouvrement. */
-void Bitmap::dessinePixels(int x, int y, int larg, int haut){
-  initPal();
-  for(int row = 0; row < height; row++){
-    // La premiere ligne du fichier bitmap est celle du bas de l'image.
-    int y1 = y + (height - 1 - row) * haut / height;
-    int y2 = y + (height - row) * haut / height;
+/* Draw the image, in screen pixels, into the width x height rectangle: each
+   file pixel becomes a block, scaling the image to the window size. Bounds
+   are computed incrementally so blocks tile the rectangle exactly, without
+   gaps or overlap. */
+void Bitmap::drawPixels(int x, int y, int width, int height){
+  applyPalette();
+  for(int row = 0; row < this->height; row++){
+    // The first row in a BMP file is the bottom of the image.
+    int y1 = y + (this->height - 1 - row) * height / this->height;
+    int y2 = y + (this->height - row) * height / this->height;
     if(y2 <= y1)
       continue;
 
     int col = 0;
-    while(col < width){
-      unsigned char idx = (unsigned char) donnees[row * padWidth + col];
-      idx = idx % nbCouleurs;
+    while(col < this->width){
+      unsigned char idx = (unsigned char) data[row * padWidth + col];
+      idx = idx % colorCount;
       int runStart = col;
-      while(col + 1 < width &&
-            (unsigned char) donnees[row * padWidth + col + 1] % nbCouleurs == idx)
+      while(col + 1 < this->width &&
+            (unsigned char) data[row * padWidth + col + 1] % colorCount == idx)
         col++;
 
-      int x1 = x + runStart * larg / width;
-      int x2 = x + (col + 1) * larg / width;
+      int x1 = x + runStart * width / this->width;
+      int x2 = x + (col + 1) * width / this->width;
       if(x2 > x1){
         modifierCouleur(idx);
         remplirRectangle(x1, y1, x2, y2);
@@ -258,45 +232,45 @@ void Bitmap::dessinePixels(int x, int y, int larg, int haut){
   }
 }
 
-void Bitmap::affiche(int x, int y) {
+void Bitmap::draw(int x, int y) {
   int px = pixX(x), py = pixY(y);
-  int larg = pixX(x + width) - px;
-  int haut = pixY(y + height) - py;
+  int width = pixX(x + this->width) - px;
+  int height = pixY(y + this->height) - py;
 
-  // Apres un changement d'echelle la copie de reference n'est plus a la bonne
-  // taille : il faut redessiner l'image pixel par pixel.
-  bool tuile = (copieX >= 0 && copieL == larg && copieH == haut);
-  if(tuile)
-    recupereSousImage(copieX, copieY, copieX + copieL, copieY + copieH);
+  // After a scale change the reference copy is no longer the right size:
+  // redraw the image pixel by pixel.
+  bool canBlit = (cacheX >= 0 && cacheWidth == width && cacheHeight == height);
+  if(canBlit)
+    recupereSousImage(cacheX, cacheY, cacheX + cacheWidth, cacheY + cacheHeight);
 
-  invaliderPixels(px, py, px + larg, py + haut);
+  invalidatePixels(px, py, px + width, py + height);
 
-  if(tuile)
+  if(canBlit)
     afficheSousImage(px, py);
   else
-    dessinePixels(px, py, larg, haut);
+    drawPixels(px, py, width, height);
 
-  copieX = px;
-  copieY = py;
-  copieL = larg;
-  copieH = haut;
+  cacheX = px;
+  cacheY = py;
+  cacheWidth = width;
+  cacheHeight = height;
 }
 
-void Bitmap::initPal(){
-  initPalette(pal, nbCouleurs); //Initialisation de la palette
+void Bitmap::applyPalette(){
+  initPalette(palette, colorCount);
 }
 
-/* remplirRectangle peint la fenetre et le double buffer avec la couleur
-   d'avant-plan courante : on la force au blanc de la palette, puis on
-   restaure le noir pour ne pas perturber les traces suivants.
+/* remplirRectangle paints the window and double buffer with the current
+   foreground color: force it to the palette white, then restore black so
+   later drawing is unaffected.
 
-   Le remplissage s'arrete un pixel avant x2 alors que tracerRectangle dessine
-   son contour sur x2 : on ajoute ce pixel pour effacer aussi les contours. Le
-   calcul est fait en pixels ecran, une unite logique pouvant valoir moins d'un
-   pixel quand la fenetre est reduite. */
-void Bitmap::remplirFond(int x1, int y1, int x2, int y2){
-  initPal();
-  modifierCouleur(indexBlanc);
+   The fill stops one pixel before x2 while tracerRectangle draws its outline
+   on x2: add that pixel to erase the outline too. The calculation is done in
+   screen pixels because one logical unit can be less than one pixel when the
+   window is shrunk. */
+void Bitmap::fillBackground(int x1, int y1, int x2, int y2){
+  applyPalette();
+  modifierCouleur(whiteIndex);
   remplirRectangle(pixX(x1), pixY(y1), pixX(x2) + 1, pixY(y2) + 1);
-  modifierCouleur(indexNoir);
+  modifierCouleur(blackIndex);
 }

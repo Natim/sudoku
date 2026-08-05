@@ -2,10 +2,10 @@
 
 #include "sudoku_grid.h"
 
-enum Difficulte { FACILE, MOYEN, DIFFICILE };
+enum Difficulty { EASY, MEDIUM, HARD };
 
-// Grille jouable : valide, a solution unique, indices marques fixe et donnee.
-Sudoku genererGrille(Difficulte niveau);
+// Playable grid: valid, unique solution, clues marked fixed and given.
+Sudoku generateGrid(Difficulty level);
 
-// Nombre de solutions, plafonne a limite (2 suffit pour tester l'unicite).
-int compterSolutions(Sudoku s, int limite);
+// Number of solutions, capped at limit (2 is enough to test uniqueness).
+int countSolutions(Sudoku s, int limit);

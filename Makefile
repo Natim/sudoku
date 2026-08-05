@@ -10,8 +10,8 @@ run: all
 
 APPLICATIONS_DIR ?= $(HOME)/.local/share/applications
 
-# Sans entree de bureau, GNOME Shell ne sait pas a quelle application
-# appartient la fenetre et lui donne une icone generique dans le dock.
+# Without a desktop entry, GNOME Shell cannot tell which application owns the
+# window and gives it a generic icon in the dock.
 desktop: all
 	install -Dm644 $(BUILD_DIR)/sudoku.desktop $(APPLICATIONS_DIR)/sudoku.desktop
 	update-desktop-database $(APPLICATIONS_DIR) 2>/dev/null || true

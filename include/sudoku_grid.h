@@ -1,28 +1,28 @@
 #pragma once
 
-const int TAILLE = 9;
+const int SIZE = 9;
 const bool BACK = false;
 const bool NEXT = true;
 
 typedef struct {
-  int ligne, colonne;
-  int grille[TAILLE][TAILLE];
-  bool fixe[TAILLE][TAILLE];
-  bool donnee[TAILLE][TAILLE];
+  int row, col;
+  int cells[SIZE][SIZE];
+  bool fixed[SIZE][SIZE];
+  bool given[SIZE][SIZE];
 } Sudoku;
 
-Sudoku initGrille();
+Sudoku emptyGrid();
 
-bool testerL(Sudoku s, int lig, int col);
-bool testerC(Sudoku s, int lig, int col);
-bool testerR(Sudoku s, int lig, int col);
-bool tester(Sudoku s, int lig, int col);
-int go(Sudoku * s, bool sens);
-bool fin(Sudoku s);
+bool checkRow(Sudoku s, int row, int col);
+bool checkCol(Sudoku s, int row, int col);
+bool checkBlock(Sudoku s, int row, int col);
+bool checkCell(Sudoku s, int row, int col);
+int step(Sudoku * s, bool forward);
+bool isComplete(Sudoku s);
 bool resolve(Sudoku * s);
-bool placer(Sudoku * s, int lig, int col, int nb);
+bool place(Sudoku * s, int row, int col, int value);
 
-void afficherSudoku(Sudoku s);
-Sudoku lireGrille();
-Sudoku chargerGrille(const char * chemin);
-bool sauvegarderGrille(Sudoku s, const char * chemin);
+void displaySudoku(Sudoku s);
+Sudoku readGrid();
+Sudoku loadGrid(const char * path);
+bool saveGrid(Sudoku s, const char * path);

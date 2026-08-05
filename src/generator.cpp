@@ -1,93 +1,93 @@
 #include "generator.h"
-#include "alea.h"
+#include "random.h"
 
 #include <algorithm>
 #include <vector>
 
-static const int NB_CASES = TAILLE * TAILLE;
-static const unsigned TOUS_CHIFFRES = 0x1FF;
+static const int CELL_COUNT = SIZE * SIZE;
+static const unsigned ALL_DIGITS = 0x1FF;
 
-struct Etat {
-  int val[NB_CASES];
-  unsigned libLigne[TAILLE];
-  unsigned libCol[TAILLE];
-  unsigned libBloc[TAILLE];
+struct State {
+  int val[CELL_COUNT];
+  unsigned freeInRow[SIZE];
+  unsigned freeInCol[SIZE];
+  unsigned freeInBlock[SIZE];
 };
 
-static int indice(int lig, int col){
-  return lig * TAILLE + col;
+static int index(int row, int col){
+  return row * SIZE + col;
 }
 
-static int bloc(int lig, int col){
-  return (lig / 3) * 3 + col / 3;
+static int block(int row, int col){
+  return (row / 3) * 3 + col / 3;
 }
 
-static void initEtatVide(Etat & e){
-  for(int i = 0; i < NB_CASES; i++)
-    e.val[i] = 0;
-  for(int i = 0; i < TAILLE; i++){
-    e.libLigne[i] = TOUS_CHIFFRES;
-    e.libCol[i]   = TOUS_CHIFFRES;
-    e.libBloc[i]  = TOUS_CHIFFRES;
+static void clearState(State & state){
+  for(int i = 0; i < CELL_COUNT; i++)
+    state.val[i] = 0;
+  for(int i = 0; i < SIZE; i++){
+    state.freeInRow[i] = ALL_DIGITS;
+    state.freeInCol[i] = ALL_DIGITS;
+    state.freeInBlock[i] = ALL_DIGITS;
   }
 }
 
-static void etatDepuisSudoku(const Sudoku & s, Etat & e){
-  initEtatVide(e);
-  for(int i = 0; i < TAILLE; i++){
-    for(int j = 0; j < TAILLE; j++){
-      int nb = s.grille[i][j];
-      if(nb == 0)
+static void stateFromSudoku(const Sudoku & s, State & state){
+  clearState(state);
+  for(int i = 0; i < SIZE; i++){
+    for(int j = 0; j < SIZE; j++){
+      int value = s.cells[i][j];
+      if(value == 0)
 	continue;
-      int p = indice(i, j);
-      int b = bloc(i, j);
-      e.val[p] = nb;
-      unsigned masque = ~(1u << (nb - 1));
-      e.libLigne[i] &= masque;
-      e.libCol[j]   &= masque;
-      e.libBloc[b]  &= masque;
+      int p = index(i, j);
+      int b = block(i, j);
+      state.val[p] = value;
+      unsigned mask = ~(1u << (value - 1));
+      state.freeInRow[i] &= mask;
+      state.freeInCol[j] &= mask;
+      state.freeInBlock[b] &= mask;
     }
   }
 }
 
-static unsigned candidats(const Etat & e, int p){
-  int lig = p / TAILLE;
-  int col = p % TAILLE;
-  return e.libLigne[lig] & e.libCol[col] & e.libBloc[bloc(lig, col)];
+static unsigned candidates(const State & state, int p){
+  int row = p / SIZE;
+  int col = p % SIZE;
+  return state.freeInRow[row] & state.freeInCol[col] & state.freeInBlock[block(row, col)];
 }
 
-static void poser(Etat & e, int p, int nb){
-  int lig = p / TAILLE;
-  int col = p % TAILLE;
-  int b = bloc(lig, col);
-  e.val[p] = nb;
-  unsigned masque = ~(1u << (nb - 1));
-  e.libLigne[lig] &= masque;
-  e.libCol[col]   &= masque;
-  e.libBloc[b]    &= masque;
+static void setCell(State & state, int p, int value){
+  int row = p / SIZE;
+  int col = p % SIZE;
+  int b = block(row, col);
+  state.val[p] = value;
+  unsigned mask = ~(1u << (value - 1));
+  state.freeInRow[row] &= mask;
+  state.freeInCol[col] &= mask;
+  state.freeInBlock[b] &= mask;
 }
 
-static void retirer(Etat & e, int p){
-  int nb = e.val[p];
-  if(nb == 0)
+static void clearCell(State & state, int p){
+  int value = state.val[p];
+  if(value == 0)
     return;
-  int lig = p / TAILLE;
-  int col = p % TAILLE;
-  int b = bloc(lig, col);
-  e.val[p] = 0;
-  unsigned bit = 1u << (nb - 1);
-  e.libLigne[lig] |= bit;
-  e.libCol[col]   |= bit;
-  e.libBloc[b]    |= bit;
+  int row = p / SIZE;
+  int col = p % SIZE;
+  int b = block(row, col);
+  state.val[p] = 0;
+  unsigned bit = 1u << (value - 1);
+  state.freeInRow[row] |= bit;
+  state.freeInCol[col] |= bit;
+  state.freeInBlock[b] |= bit;
 }
 
-static int caseMRV(const Etat & e){
-  int meilleure = -1;
+static int mrvCell(const State & state){
+  int best = -1;
   int minCand = 10;
-  for(int p = 0; p < NB_CASES; p++){
-    if(e.val[p] != 0)
+  for(int p = 0; p < CELL_COUNT; p++){
+    if(state.val[p] != 0)
       continue;
-    unsigned cand = candidats(e, p);
+    unsigned cand = candidates(state, p);
     if(cand == 0)
       return p;
     int nbCand = 0;
@@ -95,160 +95,160 @@ static int caseMRV(const Etat & e){
       nbCand++;
     if(nbCand < minCand){
       minCand = nbCand;
-      meilleure = p;
+      best = p;
     }
   }
-  return meilleure;
+  return best;
 }
 
-static void remplirCandidats(unsigned cand, int * chiffres, int & nb){
-  nb = 0;
+static void listCandidates(unsigned cand, int * digits, int & count){
+  count = 0;
   for(int d = 1; d <= 9; d++){
     if(cand & (1u << (d - 1)))
-      chiffres[nb++] = d;
+      digits[count++] = d;
   }
 }
 
-static int compterRec(Etat & e, int limite){
-  int p = caseMRV(e);
+static int countRec(State & state, int limit){
+  int p = mrvCell(state);
   if(p < 0)
     return 1;
-  if(candidats(e, p) == 0)
+  if(candidates(state, p) == 0)
     return 0;
 
   int total = 0;
-  unsigned cand = candidats(e, p);
+  unsigned cand = candidates(state, p);
   for(int d = 1; d <= 9; d++){
     if((cand & (1u << (d - 1))) == 0)
       continue;
-    poser(e, p, d);
-    total += compterRec(e, limite - total);
-    retirer(e, p);
-    if(total >= limite)
+    setCell(state, p, d);
+    total += countRec(state, limit - total);
+    clearCell(state, p);
+    if(total >= limit)
       return total;
   }
   return total;
 }
 
-static bool remplirRec(Etat & e){
-  int p = caseMRV(e);
+static bool fillRec(State & state){
+  int p = mrvCell(state);
   if(p < 0)
     return true;
-  unsigned cand = candidats(e, p);
+  unsigned cand = candidates(state, p);
   if(cand == 0)
     return false;
 
-  int chiffres[9];
-  int nb;
-  remplirCandidats(cand, chiffres, nb);
-  melanger(chiffres, nb);
+  int digits[9];
+  int count;
+  listCandidates(cand, digits, count);
+  shuffle(digits, count);
 
-  for(int i = 0; i < nb; i++){
-    poser(e, p, chiffres[i]);
-    if(remplirRec(e))
+  for(int i = 0; i < count; i++){
+    setCell(state, p, digits[i]);
+    if(fillRec(state))
       return true;
-    retirer(e, p);
+    clearCell(state, p);
   }
   return false;
 }
 
-static bool remplirSolution(Etat & e){
-  initEtatVide(e);
-  return remplirRec(e);
+static bool fillSolution(State & state){
+  clearState(state);
+  return fillRec(state);
 }
 
-static int compterEtat(Etat e, int limite){
-  return compterRec(e, limite);
+static int countState(State state, int limit){
+  return countRec(state, limit);
 }
 
-static int compterIndices(const Etat & e){
-  int nb = 0;
-  for(int p = 0; p < NB_CASES; p++)
-    if(e.val[p] != 0)
-      nb++;
-  return nb;
+static int countClues(const State & state){
+  int count = 0;
+  for(int p = 0; p < CELL_COUNT; p++)
+    if(state.val[p] != 0)
+      count++;
+  return count;
 }
 
-static int cibleIndices(Difficulte niveau){
-  switch(niveau){
-  case FACILE:    return 45;
-  case MOYEN:     return 34;
-  case DIFFICILE: return 28;
+static int targetClues(Difficulty level){
+  switch(level){
+  case EASY:    return 45;
+  case MEDIUM:  return 34;
+  case HARD:    return 28;
   }
   return 34;
 }
 
-static Etat creuser(Etat e, int cible){
-  int paires[41];
+static State carve(State state, int target){
+  int pairs[41];
   for(int i = 0; i < 41; i++)
-    paires[i] = i;
-  melanger(paires, 41);
+    pairs[i] = i;
+  shuffle(pairs, 41);
 
   for(int k = 0; k < 41; k++){
-    if(compterIndices(e) <= cible)
+    if(countClues(state) <= target)
       break;
 
-    int p = paires[k];
+    int p = pairs[k];
     int q = 80 - p;
-    int sauvP = e.val[p];
-    int sauvQ = e.val[q];
+    int savedP = state.val[p];
+    int savedQ = state.val[q];
 
-    retirer(e, p);
+    clearCell(state, p);
     if(p != q)
-      retirer(e, q);
+      clearCell(state, q);
 
-    if(compterEtat(e, 2) == 1)
+    if(countState(state, 2) == 1)
       continue;
 
-    if(sauvP != 0)
-      poser(e, p, sauvP);
-    if(p != q && sauvQ != 0)
-      poser(e, q, sauvQ);
+    if(savedP != 0)
+      setCell(state, p, savedP);
+    if(p != q && savedQ != 0)
+      setCell(state, q, savedQ);
   }
-  return e;
+  return state;
 }
 
-static Sudoku sudokuDepuisEtat(const Etat & e){
-  Sudoku s = initGrille();
-  for(int i = 0; i < TAILLE; i++){
-    for(int j = 0; j < TAILLE; j++){
-      int nb = e.val[indice(i, j)];
-      if(nb == 0)
+static Sudoku sudokuFromState(const State & state){
+  Sudoku s = emptyGrid();
+  for(int i = 0; i < SIZE; i++){
+    for(int j = 0; j < SIZE; j++){
+      int value = state.val[index(i, j)];
+      if(value == 0)
 	continue;
-      s.grille[i][j] = nb;
-      s.fixe[i][j]   = true;
-      s.donnee[i][j] = true;
+      s.cells[i][j] = value;
+      s.fixed[i][j] = true;
+      s.given[i][j] = true;
     }
   }
   return s;
 }
 
-int compterSolutions(Sudoku s, int limite){
-  if(limite <= 0)
+int countSolutions(Sudoku s, int limit){
+  if(limit <= 0)
     return 0;
-  Etat e;
-  etatDepuisSudoku(s, e);
-  return compterEtat(e, limite);
+  State state;
+  stateFromSudoku(s, state);
+  return countState(state, limit);
 }
 
-Sudoku genererGrille(Difficulte niveau){
-  int cible = cibleIndices(niveau);
-  Sudoku meilleure = initGrille();
-  int meilleurNb = NB_CASES + 1;
+Sudoku generateGrid(Difficulty level){
+  int target = targetClues(level);
+  Sudoku best = emptyGrid();
+  int bestClues = CELL_COUNT + 1;
 
-  for(int essai = 0; essai < 3; essai++){
-    Etat solution;
-    if(!remplirSolution(solution))
+  for(int attempt = 0; attempt < 3; attempt++){
+    State solution;
+    if(!fillSolution(solution))
       continue;
 
-    Etat creusee = creuser(solution, cible);
-    int nb = compterIndices(creusee);
-    if(nb < meilleurNb){
-      meilleurNb = nb;
-      meilleure = sudokuDepuisEtat(creusee);
-      if(nb <= cible)
+    State carved = carve(solution, target);
+    int count = countClues(carved);
+    if(count < bestClues){
+      bestClues = count;
+      best = sudokuFromState(carved);
+      if(count <= target)
 	break;
     }
   }
-  return meilleure;
+  return best;
 }

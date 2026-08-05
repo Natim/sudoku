@@ -4,11 +4,11 @@
 #include <vector>
 
 bool alert(int x, int y, std::string message);
-bool alert(int x, int y, std::string message, std::string titre);
-bool alert(int x, int y, int width, int height, std::string message, std::string titre);
+bool alert(int x, int y, std::string title, std::string message);
+bool alert(int x, int y, int width, int height, std::string title, std::string message);
 
-int choisir(int x, int y, int width, int height,
-            std::string titre, std::string message,
-            const std::vector<std::string> & choix);
+int choose(int x, int y, int width, int height,
+           std::string title, std::string message,
+           const std::vector<std::string> & choices);
 
-void definirRepeindreFond(void (*peindre)());
+void setBackgroundRepaint(void (*paint)());

@@ -1,5 +1,5 @@
-# Le jeu s'appuie sur X11 et sur une bibliotheque graphlib prebuild pour Linux :
-# la CI ne couvre donc que Linux, avec gcc et clang.
+# The game depends on X11 and a prebuilt graphlib for Linux; CI covers Linux
+# only, with gcc and clang.
 name: CMake
 
 on:

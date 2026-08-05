@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(sudoku
   src/main.cpp
-  src/alea.cpp
+  src/random.cpp
   src/bitmap.cpp
   src/dialog_box.cpp
   src/encoding.cpp
@@ -27,8 +27,8 @@ target_compile_definitions(sudoku PRIVATE
 
 target_compile_options(sudoku PRIVATE -Wall -Wextra)
 
-# L'entree de bureau designe l'executable et l'icone par chemin absolu : le jeu
-# se lance depuis l'arborescence des sources, sans etape d'installation.
+# The desktop entry points at the executable and icon by absolute path: the
+# game runs from the source tree without an install step.
 set(SUDOKU_EXEC "${CMAKE_CURRENT_BINARY_DIR}/sudoku")
 set(SUDOKU_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/sudoku.svg")
 configure_file(

@@ -1,10 +1,10 @@
 //------------------------------------------------------//
-// Sudoku.struct.cpp
-// Structure Sudoku et ses fonctions pour résoudre et 
-// générer des grilles de sudoku
+// sudoku_grid.cpp
+// Sudoku structure and functions to solve and generate
+// sudoku grids
 //-----------------------------------------------------//
-// Auteur : Natim
-// Date de dernière modification : 12-05-2006
+// Author: Natim
+// Last modified: 12-05-2006
 //-----------------------------------------------------//
 
 #include "sudoku_grid.h"
@@ -14,176 +14,150 @@
 
 using namespace std;
 
-/***************************
- ** Création de Sudoku de **
- ** différents types      **
- ***************************/
-Sudoku initGrille(){
-/* Initialise une grille vierge de Sudoku */
+Sudoku emptyGrid(){
   Sudoku s;
   int i, j;
-  s.ligne   = 0;// hasard(8);
-  s.colonne = 0;// hasard(8);
+  s.row = 0;
+  s.col = 0;
 
-  for(i = 0; i < TAILLE; i++)
-    for(j = 0; j < TAILLE; j++){
-      s.grille[i][j] = 0;
-      s.fixe[i][j]   = false;
-      s.donnee[i][j] = false;
+  for(i = 0; i < SIZE; i++)
+    for(j = 0; j < SIZE; j++){
+      s.cells[i][j] = 0;
+      s.fixed[i][j] = false;
+      s.given[i][j] = false;
     }
   return s;
 }
 
-/*****************************
- ** Fonction de résolutions **
- *****************************/
-bool testerL(Sudoku s, int lig, int col){
-  /* Teste si le nombre posx, posy n'est pas déjà dans la ligne */
+bool checkRow(Sudoku s, int row, int col){
   int i;
-  
-  for(i = 0; i < TAILLE; i++)
+
+  for(i = 0; i < SIZE; i++)
     if(i != col)
-      if(s.grille[lig][i] == s.grille[lig][col])
+      if(s.cells[row][i] == s.cells[row][col])
 	return false;
-  
+
   return true;
 }
 
-
-bool testerC(Sudoku s, int lig, int col){
-/* Teste si le nombre posx, posy n'est pas déjà dans la colonne */
+bool checkCol(Sudoku s, int row, int col){
   int i;
-  
-  for(i = 0; i < TAILLE; i++)
-    if(i != lig)
-      if(s.grille[i][col] == s.grille[lig][col])
+
+  for(i = 0; i < SIZE; i++)
+    if(i != row)
+      if(s.cells[i][col] == s.cells[row][col])
 	return false;
-  
+
   return true;
 }
 
-bool testerR(Sudoku s, int lig, int col){
-/* Teste si le nombre posx, posy n'est pas déjà dans la région */
+bool checkBlock(Sudoku s, int row, int col){
   int i, j;
 
-  int minLig = lig/3 * 3;
-  int maxLig = (lig/3 + 1) * 3;
-  int minCol = col/3 * 3;
-  int maxCol = (col/3 + 1) * 3;
-  
-  for(i = minLig; i < maxLig; i++){
+  int minRow = row / 3 * 3;
+  int maxRow = (row / 3 + 1) * 3;
+  int minCol = col / 3 * 3;
+  int maxCol = (col / 3 + 1) * 3;
+
+  for(i = minRow; i < maxRow; i++){
     for(j = minCol; j < maxCol; j++){
-      if(i != lig && j != col)
-	if(s.grille[i][j] == s.grille[lig][col])
+      if(i != row && j != col)
+	if(s.cells[i][j] == s.cells[row][col])
 	  return false;
     }
-  }  
+  }
   return true;
 }
 
-bool tester(Sudoku s, int lig, int col){
-/* Test si on peut placer le nombre posx,posy à cette place */
-  if (testerL(s, lig, col) && testerC(s, lig, col) && testerR(s, lig, col))
+bool checkCell(Sudoku s, int row, int col){
+  if(checkRow(s, row, col) && checkCol(s, row, col) && checkBlock(s, row, col))
     return true;
   else
     return false;
 }
 
-int go(Sudoku * s, bool sens){
-/* 
-   Utilisé par la fonction resolve,
-   Cette fonction avance ou recule d'une case
-*/
-  if(sens){
-    s->ligne++;
-    if(s->ligne > 8){
-      s->ligne = 0;
-      if(s->colonne == 8) return 1; /* VICTOIRE */
-      else s->colonne++;
+int step(Sudoku * s, bool forward){
+  if(forward){
+    s->row++;
+    if(s->row > 8){
+      s->row = 0;
+      if(s->col == 8) return 1;
+      else s->col++;
     }
   }else{
-    s->ligne--;
-    if(s->ligne < 0){
-      s->ligne = 8;
-      if(s->colonne == 0) return -1; /* IMPOSSIBLE */
-      else s->colonne--;
+    s->row--;
+    if(s->row < 0){
+      s->row = 8;
+      if(s->col == 0) return -1;
+      else s->col--;
     }
   }
   return 0;
 }
 
-bool fin(Sudoku s){
-/*
-  Retourne true si le Sudoku est résolu
-*/
+bool isComplete(Sudoku s){
   int i, j;
-  for(i = 0; i < TAILLE; i++)
-    for(j = 0; j < TAILLE; j++)
-      if(s.grille[i][j] == 0)
+  for(i = 0; i < SIZE; i++)
+    for(j = 0; j < SIZE; j++)
+      if(s.cells[i][j] == 0)
 	return false;
   return true;
 }
+
 bool resolve(Sudoku * s){
-/* 
-   Résoud le Sudoku s 
-   Retourne true s'il y a une solution et false sinon
-*/
-  int nbBoucles = 0;
+  int loops = 0;
   int noSolution = 0;
 
-  while(!fin(*s) && noSolution == 0){
-    if(s->grille[s->ligne][s->colonne] == 0)
-      s->grille[s->ligne][s->colonne] = 1;
+  while(!isComplete(*s) && noSolution == 0){
+    if(s->cells[s->row][s->col] == 0)
+      s->cells[s->row][s->col] = 1;
 
-    while(!tester(*s, s->ligne, s->colonne)){
-      if(s->grille[s->ligne][s->colonne] == 0)
-	s->grille[s->ligne][s->colonne] = 1;
-      else if(!s->fixe[s->ligne][s->colonne])
-	s->grille[s->ligne][s->colonne]++;
-      else if(s->fixe[s->ligne][s->colonne]){
-	while(s->fixe[s->ligne][s->colonne])
-	    noSolution = go(s, BACK);
-	s->grille[s->ligne][s->colonne]++;
+    while(!checkCell(*s, s->row, s->col)){
+      if(s->cells[s->row][s->col] == 0)
+	s->cells[s->row][s->col] = 1;
+      else if(!s->fixed[s->row][s->col])
+	s->cells[s->row][s->col]++;
+      else if(s->fixed[s->row][s->col]){
+	while(s->fixed[s->row][s->col])
+	    noSolution = step(s, BACK);
+	s->cells[s->row][s->col]++;
       }
 
-      while(s->grille[s->ligne][s->colonne] > 9){
-	s->grille[s->ligne][s->colonne] = 0;
-	noSolution = go(s, BACK);
-	
-	while(s->fixe[s->ligne][s->colonne])
-	    noSolution = go(s, BACK);
-	s->grille[s->ligne][s->colonne]++;
+      while(s->cells[s->row][s->col] > 9){
+	s->cells[s->row][s->col] = 0;
+	noSolution = step(s, BACK);
+
+	while(s->fixed[s->row][s->col])
+	    noSolution = step(s, BACK);
+	s->cells[s->row][s->col]++;
       }
     }
     if(noSolution != -1)
-	noSolution = go(s, NEXT);
-    nbBoucles++;
+	noSolution = step(s, NEXT);
+    loops++;
   }
-  cerr << nbBoucles << endl;
+  cerr << loops << endl;
   if(noSolution == -1)
     return false;
   else
     return true;
 }
-/*************************
- ** Fonction de plaçage **
- *************************/
-bool placer(Sudoku * s, int lig, int col, int nb){
-/* Essaye de placer le nombre, nb, a la position, pos, du Sudoku, s. */
-  int temp = 0;
 
-  if(lig >= 0 && lig < 9 && col >= 0 && col < 9 && nb >= 0 && nb < 10){
-    if(s->donnee[lig][col])
+bool place(Sudoku * s, int row, int col, int value){
+  int previous = 0;
+
+  if(row >= 0 && row < 9 && col >= 0 && col < 9 && value >= 0 && value < 10){
+    if(s->given[row][col])
       return false;
 
-    temp = s->grille[lig][col];
-    s->grille[lig][col] = nb;
-    s->fixe[lig][col] = (nb != 0);
+    previous = s->cells[row][col];
+    s->cells[row][col] = value;
+    s->fixed[row][col] = (value != 0);
 
-    if(nb != 0){
-      if(!tester(*s, lig, col)){
-	s->grille[lig][col] = temp;
-	s->fixe[lig][col]   = false;
+    if(value != 0){
+      if(!checkCell(*s, row, col)){
+	s->cells[row][col] = previous;
+	s->fixed[row][col] = false;
 	return false;
       }
     }
@@ -192,80 +166,80 @@ bool placer(Sudoku * s, int lig, int col, int nb){
   return true;
 }
 
-void afficherSudoku(Sudoku s){
+void displaySudoku(Sudoku s){
   int i, j;
-  
+
   cerr << ",-----------," << endl;
-    
-  for(i = 0; i < 9; i++){        
+
+  for(i = 0; i < 9; i++){
     for(j = 0; j < 9; j++){
       if(j == 0)
 	cerr << "|" << flush;
-      if(s.grille[i][j] == 0)
+      if(s.cells[i][j] == 0)
 	cerr << " " << flush;
       else
-	cerr << s.grille[i][j] << flush;
-                            
+	cerr << s.cells[i][j] << flush;
+
       if(j == 2)
 	cerr << "|" << flush;
       if(j == 5)
-	cerr << "|" << flush;              
+	cerr << "|" << flush;
       if(j == 8)
 	cerr << "|" << endl;
     }
-    
+
     if(i == 2 || i == 5)
-      cerr << "|---|---|---|" << endl; 
+      cerr << "|---|---|---|" << endl;
   }
   cerr << "'-----------'" << endl;
 }
 
-Sudoku lireGrille(){
+Sudoku readGrid(){
   Sudoku s;
-  s = initGrille();
-  int i, j, nb;
-  for(i = 0; i < TAILLE; i++)
-    for(j = 0; j < TAILLE; j++){
-      cin >> nb;
-      placer(&s, i, j, nb);
+  s = emptyGrid();
+  int i, j, value;
+  for(i = 0; i < SIZE; i++)
+    for(j = 0; j < SIZE; j++){
+      cin >> value;
+      place(&s, i, j, value);
     }
-  afficherSudoku(s);
+  displaySudoku(s);
   return s;
 }
 
-Sudoku chargerGrille(const char * chemin){
-  ifstream fic;
-  int code;
+Sudoku loadGrid(const char * path){
+  ifstream file;
+  int value;
   int i, j;
 
-  Sudoku s = initGrille();
+  Sudoku s = emptyGrid();
 
-  fic.open(chemin, ios::in);
-  if(!fic.good())
-    return initGrille();
+  file.open(path, ios::in);
+  if(!file.good())
+    return emptyGrid();
 
   for(i = 0; i < 9; i++)
     for(j = 0; j < 9; j++)
-      if(!fic.eof()){
-	fic >> code;
-	placer(&s, i, j, code);
-	if(code != 0){
-	  s.fixe[i][j]   = true;
-	  s.donnee[i][j] = true;
+      if(!file.eof()){
+	file >> value;
+	place(&s, i, j, value);
+	if(value != 0){
+	  s.fixed[i][j] = true;
+	  s.given[i][j] = true;
 	}
       }
-  fic.close();
+  file.close();
   return s;
 }
 
-bool sauvegarderGrille(Sudoku s, const char * chemin){
-  ofstream fic;
+bool saveGrid(Sudoku s, const char * path){
+  ofstream file;
   int i, j;
-  fic.open(chemin, ios::out);
-  if(fic.good())
+  file.open(path, ios::out);
+  if(file.good())
     for(i = 0; i < 9; i++)
       for(j = 0; j < 9; j++)
-	fic << s.grille[i][j] << endl;
-  fic.close();
-  return fic.good();
+	file << s.cells[i][j] << endl;
+  file.close();
+  return file.good();
 }

@@ -3,16 +3,16 @@
 #include <string>
 
 const short BITMAP_MAGIC_NUMBER = 19778;
-const int   RVB_BYTE_SIZE = 3;
+const int   RGB_BYTE_SIZE = 3;
 
 #pragma pack(push, bitmap_data, 1)
 
 typedef struct {
-  char rvbBleu;
-  char rvbVert;
-  char rvbRouge;
-  char rvbReserve;
-} RVBCoul;
+  char blue;
+  char green;
+  char red;
+  char reserved;
+} RgbColor;
 
 typedef struct {
   unsigned short bfType;
@@ -40,41 +40,41 @@ typedef struct {
 
 class Bitmap {
 public:
-    std::string nom;
+    std::string name;
 
-    int width, height, nbCouleurs;
+    int width, height, colorCount;
 
     Bitmap();
     Bitmap(const char *);
     ~Bitmap();
 
     bool loadBMP(const char *);
-    void affiche(int x, int y);
-    void initPal();
-    void remplirFond(int x1, int y1, int x2, int y2);
-    static void invaliderZone(int x1, int y1, int x2, int y2);
-    static void invaliderTout();
+    void draw(int x, int y);
+    void applyPalette();
+    void fillBackground(int x1, int y1, int x2, int y2);
+    static void invalidateArea(int x1, int y1, int x2, int y2);
+    static void invalidateAll();
 
 private:
-    void dessinePixels(int x, int y, int larg, int haut);
-    void enregistrer();
-    void desenregistrer();
-    static void invaliderPixels(int x1, int y1, int x2, int y2);
+    void drawPixels(int x, int y, int width, int height);
+    void registerInstance();
+    void unregisterInstance();
+    static void invalidatePixels(int x1, int y1, int x2, int y2);
 
     BitmapFileHeader bmfh;
     BitmapInfoHeader bmih;
-    RVBCoul       * couleurs;
-    char          * donnees;
-    unsigned char * pal;
-    unsigned int tailleDonnees;
+    RgbColor       * colors;
+    char           * data;
+    unsigned char  * palette;
+    unsigned int dataSize;
     unsigned short bpp;
 
     int byteWidth;
     int padWidth;
-    int copieX, copieY;
-    int copieL, copieH;
-    int indexBlanc, indexNoir;
+    int cacheX, cacheY;
+    int cacheWidth, cacheHeight;
+    int whiteIndex, blackIndex;
 
     static Bitmap * instances[64];
-    static int nbInstances;
+    static int instanceCount;
 };

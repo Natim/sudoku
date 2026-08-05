@@ -1,15 +1,15 @@
 #pragma once
 
-void ouvrirFenetreAdaptable(int larg, int haut, const char * titre);
+void openScalableWindow(int width, int height, const char * title);
 
-double echelle();
+double scale();
 int pixX(int x);
 int pixY(int y);
 
-bool attendreClicLogique(int * x, int * y);
+bool waitForLogicalClick(int * x, int * y);
 
-void ligne(int x1, int y1, int x2, int y2);
-void rectangle(int x1, int y1, int x2, int y2);
-void rectanglePlein(int x1, int y1, int x2, int y2);
-void ecrire(int x, int y, const char * texte);
-int  largeurTexte(const char * texte);
+void drawLine(int x1, int y1, int x2, int y2);
+void drawRect(int x1, int y1, int x2, int y2);
+void fillRect(int x1, int y1, int x2, int y2);
+void drawText(int x, int y, const char * text);
+int  textWidth(const char * text);
