@@ -7,6 +7,7 @@
 // Date de dernière modification : 18-04-2006
 //-----------------------------------------------------//
 #include "Bitmap.class.h"
+#include "Fenetre.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -24,6 +25,7 @@ Bitmap::Bitmap(){
   pal      = NULL;
   width = height = 0;
   copieX = copieY = -1;
+  copieL = copieH = 0;
   indexBlanc = indexNoir = 0;
   enregistrer();
 }
@@ -34,6 +36,7 @@ Bitmap::Bitmap(const char *file){
   donnees  = NULL;
   pal      = NULL;
   copieX = copieY = -1;
+  copieL = copieH = 0;
   indexBlanc = indexNoir = 0;
   loadBMP(file);
   enregistrer();
@@ -67,15 +70,21 @@ void Bitmap::desenregistrer(){
   }
 }
 
-void Bitmap::invaliderZone(int x1, int y1, int x2, int y2){
+// Les copies de reference sont reperees en pixels ecran, pas en coordonnees
+// logiques : leur taille depend de l'echelle en cours.
+void Bitmap::invaliderPixels(int x1, int y1, int x2, int y2){
   for(int i = 0; i < nbInstances; i++){
     Bitmap * bmp = instances[i];
     if(bmp->copieX < 0)
       continue;
-    if(bmp->copieX + bmp->width > x1 && bmp->copieX < x2 &&
-       bmp->copieY + bmp->height > y1 && bmp->copieY < y2)
+    if(bmp->copieX + bmp->copieL > x1 && bmp->copieX < x2 &&
+       bmp->copieY + bmp->copieH > y1 && bmp->copieY < y2)
       bmp->copieX = bmp->copieY = -1;
   }
+}
+
+void Bitmap::invaliderZone(int x1, int y1, int x2, int y2){
+  invaliderPixels(pixX(x1), pixY(y1), pixX(x2), pixY(y2));
 }
 
 void Bitmap::invaliderTout(){
@@ -212,14 +221,19 @@ bool Bitmap::loadBMP(const char *file) {
   return true;
 }
 
-/* Un trace par suite de pixels de meme couleur : les glyphes sont surtout
-   composes d'aplats, ce qui evite un aller-retour avec le serveur X par
-   pixel. */
-void Bitmap::dessinePixels(int x, int y){
+/* Dessine l'image, en pixels ecran, dans le rectangle larg x haut : chaque
+   pixel du fichier devient un bloc, ce qui met l'image a l'echelle de la
+   fenetre. Les bornes sont calculees de proche en proche pour que les blocs
+   pavent exactement le rectangle, sans trou ni recouvrement. */
+void Bitmap::dessinePixels(int x, int y, int larg, int haut){
   initPal();
   for(int row = 0; row < height; row++){
     // La premiere ligne du fichier bitmap est celle du bas de l'image.
-    int yy = y + height - 1 - row;
+    int y1 = y + (height - 1 - row) * haut / height;
+    int y2 = y + (height - row) * haut / height;
+    if(y2 <= y1)
+      continue;
+
     int col = 0;
     while(col < width){
       unsigned char idx = (unsigned char) donnees[row * padWidth + col];
@@ -228,29 +242,40 @@ void Bitmap::dessinePixels(int x, int y){
       while(col + 1 < width &&
             (unsigned char) donnees[row * padWidth + col + 1] % nbCouleurs == idx)
         col++;
-      modifierCouleur(idx);
-      tracerLigne(x + runStart, yy, x + col, yy);
+
+      int x1 = x + runStart * larg / width;
+      int x2 = x + (col + 1) * larg / width;
+      if(x2 > x1){
+        modifierCouleur(idx);
+        remplirRectangle(x1, y1, x2, y2);
+      }
       col++;
     }
   }
 }
 
-/* Tant qu'une copie de l'image est intacte a l'ecran, l'afficher ailleurs ne
-   coute que trois requetes de copie ; sinon il faut la redessiner. */
 void Bitmap::affiche(int x, int y) {
-  bool tuile = (copieX >= 0);
-  if(tuile)
-    recupereSousImage(copieX, copieY, copieX + width, copieY + height);
+  int px = pixX(x), py = pixY(y);
+  int larg = pixX(x + width) - px;
+  int haut = pixY(y + height) - py;
 
-  invaliderZone(x, y, x + width, y + height);
+  // Apres un changement d'echelle la copie de reference n'est plus a la bonne
+  // taille : il faut redessiner l'image pixel par pixel.
+  bool tuile = (copieX >= 0 && copieL == larg && copieH == haut);
+  if(tuile)
+    recupereSousImage(copieX, copieY, copieX + copieL, copieY + copieH);
+
+  invaliderPixels(px, py, px + larg, py + haut);
 
   if(tuile)
-    afficheSousImage(x, y);
+    afficheSousImage(px, py);
   else
-    dessinePixels(x, y);
+    dessinePixels(px, py, larg, haut);
 
-  copieX = x;
-  copieY = y;
+  copieX = px;
+  copieY = py;
+  copieL = larg;
+  copieH = haut;
 }
 
 void Bitmap::initPal(){
@@ -262,10 +287,12 @@ void Bitmap::initPal(){
    restaure le noir pour ne pas perturber les traces suivants.
 
    Le remplissage s'arrete un pixel avant x2 alors que tracerRectangle dessine
-   son contour sur x2 : on ajoute ce pixel pour effacer aussi les contours. */
+   son contour sur x2 : on ajoute ce pixel pour effacer aussi les contours. Le
+   calcul est fait en pixels ecran, une unite logique pouvant valoir moins d'un
+   pixel quand la fenetre est reduite. */
 void Bitmap::remplirFond(int x1, int y1, int x2, int y2){
   initPal();
   modifierCouleur(indexBlanc);
-  remplirRectangle(x1, y1, x2 + 1, y2 + 1);
+  remplirRectangle(pixX(x1), pixY(y1), pixX(x2) + 1, pixY(y2) + 1);
   modifierCouleur(indexNoir);
 }

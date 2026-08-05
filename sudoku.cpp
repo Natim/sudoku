@@ -4,6 +4,7 @@ extern "C"{
 #include "Bitmap.class.h"
 #include "Sudoku.struct.h"
 #include "BoiteDialogue.h"
+#include "Fenetre.h"
 
 // Définition des types //
 typedef struct{
@@ -33,6 +34,7 @@ Bouton erreur;
 Bouton * b;
 Bouton * bouton = NULL;   // Bouton sur lequel on appuie
 int ecran[9][9];
+Sudoku * sudokuAffiche = NULL;  // Grille actuellement a l'ecran
 
 // Prototypes //
 void alloueBmp();
@@ -41,6 +43,7 @@ void menu();
 void positionCase(int lig, int col, int * x, int * y);
 void majEcran(Sudoku s);
 void peindreTout(Sudoku s);
+void repeindreTout();
 void restaurerZone(int x, int y, int larg, int haut);
 void apresAlerte(Sudoku s);
 
@@ -52,13 +55,17 @@ int main(){
 
   alloueBmp();            // Alloue les bitmaps
   Sudoku sudoku = initGrille();
+  sudokuAffiche = &sudoku;
+  definirRepeindreFond(repeindreTout);
 
-  ouvrirFenetreTailleTitre(FENETRE, FENETRE, (char *) "Sudoku - Rémy HUBSCHER(c)");
+  ouvrirFenetreAdaptable(FENETRE, FENETRE, "Sudoku - Rémy HUBSCHER(c)");
   peindreTout(sudoku);
 
   while(!quitter){
-      positionSouris(&x, &y);
-      testerFenetre();
+      if(!attendreClicLogique(&x, &y)){
+	peindreTout(sudoku);   // La fenetre a change de taille
+	continue;
+      }
 
       if(y >= 7 && y <= 39){ // On est dans la zone du menu
 	if(x >= nouv.x && x <= nouv.x+32){
@@ -212,7 +219,7 @@ void desalloueBmp(){
 void menu(){
   int i;
     // Limite du menu //
-  tracerLigne(0, 46, FENETRE, 46);
+  ligne(0, 46, FENETRE, 46);
   
   nouv.up->affiche(nouv.x, 7);
   ouvrir.up->affiche(ouvrir.x, 7);
@@ -258,6 +265,11 @@ void peindreTout(Sudoku s){
   majEcran(s);
   if(bouton != NULL)
     bouton->down->affiche(bouton->x, 7);
+}
+
+void repeindreTout(){
+  if(sudokuAffiche != NULL)
+    peindreTout(*sudokuAffiche);
 }
 
 const int TAILLE_CASE = 32;

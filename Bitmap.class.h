@@ -69,9 +69,10 @@ public:
     static void invaliderTout();
 
 private:
-    void dessinePixels(int x, int y);
+    void dessinePixels(int x, int y, int larg, int haut);
     void enregistrer();
     void desenregistrer();
+    static void invaliderPixels(int x1, int y1, int x2, int y2);
 
     // Attributs
     BitmapFileHeader bmfh;
@@ -85,6 +86,7 @@ private:
     int byteWidth;                 // La taille en bytes de l'image
     int padWidth;                  // La taille en bytes de l'image modifiée
     int copieX, copieY;            // -1 when no valid master tile on screen
+    int copieL, copieH;            // taille en pixels ecran de cette copie
     int indexBlanc, indexNoir;     // Indices palette du blanc et du noir
 
     static Bitmap * instances[64];

@@ -17,10 +17,16 @@ bool alert(int x, int y, string message);
 
 bool alert(int x, int y, string message, string titre);
 /*
-  On peut mettre un titre à la boite de dialogue
+  On peut mettre un titre a la boite de dialogue
 */
 
 bool alert(int x, int y, int width, int height, string message, string titre);
 /*
-  On peut mettre un titre à la boite de dialogue et spécifier une taille
+  On peut mettre un titre a la boite de dialogue et specifier une taille
+*/
+
+void definirRepeindreFond(void (*peindre)());
+/*
+  Indique comment repeindre ce que la boite recouvre, pour que celle-ci puisse
+  se reafficher apres un redimensionnement de la fenetre.
 */

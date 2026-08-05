@@ -5,7 +5,7 @@ CXXFLAGS=-O3 -g -Wall
 LDFLAGS=-Llib
 LDLIBS=-lgraphlib -lX11
 
-OBJETS=sudoku.o Bitmap.class.o Sudoku.struct.o BoiteDialogue.o
+OBJETS=sudoku.o Bitmap.class.o Sudoku.struct.o BoiteDialogue.o Fenetre.o
 
 all: sudoku
 
