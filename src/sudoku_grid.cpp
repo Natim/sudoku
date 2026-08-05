@@ -10,8 +10,6 @@
 #include "sudoku_grid.h"
 
 #include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include <fstream>
 
 using namespace std;
@@ -31,6 +29,7 @@ Sudoku initGrille(){
     for(j = 0; j < TAILLE; j++){
       s.grille[i][j] = 0;
       s.fixe[i][j]   = false;
+      s.donnee[i][j] = false;
     }
   return s;
 }
@@ -170,10 +169,13 @@ bool resolve(Sudoku * s){
  ** Fonction de plaçage **
  *************************/
 bool placer(Sudoku * s, int lig, int col, int nb){
-/* Essaye de placer le nombre, nb, à la position, pos, du Sudoku, s. */
+/* Essaye de placer le nombre, nb, a la position, pos, du Sudoku, s. */
   int temp = 0;
 
   if(lig >= 0 && lig < 9 && col >= 0 && col < 9 && nb >= 0 && nb < 10){
+    if(s->donnee[lig][col])
+      return false;
+
     temp = s->grille[lig][col];
     s->grille[lig][col] = nb;
     s->fixe[lig][col] = (nb != 0);
@@ -218,13 +220,6 @@ void afficherSudoku(Sudoku s){
   cerr << "'-----------'" << endl;
 }
 
-int hasard(int nb){
-/* Retourne un nombre entre 0 et nb */
-  /* Division entiere en nb + 1 tranches : passer par un float arrondirait
-     RAND_MAX au-dessus de sa valeur et laisserait sortir nb + 1. */
-  return rand() / (RAND_MAX / (nb + 1) + 1);
-}
-
 Sudoku lireGrille(){
   Sudoku s;
   s = initGrille();
@@ -254,6 +249,10 @@ Sudoku chargerGrille(const char * chemin){
       if(!fic.eof()){
 	fic >> code;
 	placer(&s, i, j, code);
+	if(code != 0){
+	  s.fixe[i][j]   = true;
+	  s.donnee[i][j] = true;
+	}
       }
   fic.close();
   return s;

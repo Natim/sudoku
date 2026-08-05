@@ -8,6 +8,7 @@ typedef struct {
   int ligne, colonne;
   int grille[TAILLE][TAILLE];
   bool fixe[TAILLE][TAILLE];
+  bool donnee[TAILLE][TAILLE];
 } Sudoku;
 
 Sudoku initGrille();
@@ -22,7 +23,6 @@ bool resolve(Sudoku * s);
 bool placer(Sudoku * s, int lig, int col, int nb);
 
 void afficherSudoku(Sudoku s);
-int hasard(int nb);
 Sudoku lireGrille();
 Sudoku chargerGrille(const char * chemin);
 bool sauvegarderGrille(Sudoku s, const char * chemin);

@@ -7,9 +7,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(sudoku
   src/main.cpp
+  src/alea.cpp
   src/bitmap.cpp
   src/dialog_box.cpp
   src/encoding.cpp
+  src/generator.cpp
   src/sudoku_grid.cpp
   src/window.cpp
 )

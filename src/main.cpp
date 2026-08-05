@@ -3,12 +3,12 @@ extern "C"{
 }
 #include "bitmap.h"
 #include "sudoku_grid.h"
+#include "generator.h"
 #include "dialog_box.h"
 #include "window.h"
 
 #include <string>
-#include <cstdlib>
-#include <ctime>
+#include <vector>
 
 #ifndef SUDOKU_ASSETS_DIR
 #define SUDOKU_ASSETS_DIR "assets"
@@ -34,6 +34,10 @@ const int DIAL_W = 300;
 const int DIAL_H = 100;
 const int DIAL_X = (FENETRE - DIAL_W) / 2;
 const int DIAL_Y = (FENETRE - DIAL_H) / 2;
+const int GEN_W = 460;
+const int GEN_H = 110;
+const int GEN_X = (FENETRE - GEN_W) / 2;
+const int GEN_Y = (FENETRE - GEN_H) / 2;
 
 // Variable Globale //
 Bouton nouv;
@@ -59,8 +63,7 @@ void restaurerZone(int x, int y, int larg, int haut);
 void apresAlerte(Sudoku s);
 
 int main(){
-  srand(time(NULL));
-  int x, y;               // Coordonnée de la souris
+  int x, y;               // Coordonnee de la souris
   int lig, col;
   bool quitter = false;
 
@@ -81,11 +84,29 @@ int main(){
       if(y >= 7 && y <= 39){ // On est dans la zone du menu
 	if(x >= nouv.x && x <= nouv.x+32){
 	  bouton = &nouv;
-	  // Ici, on génére une grille vierge
-	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment initialiser la grille ?"))
+	  std::vector<std::string> choix;
+	  choix.push_back("Facile");
+	  choix.push_back("Moyen");
+	  choix.push_back("Difficile");
+	  choix.push_back("Vierge");
+	  choix.push_back("Annuler");
+	  int selection = choisir(GEN_X, GEN_Y, GEN_W, GEN_H,
+				  "Nouvelle grille",
+				  "Quelle difficulte ?",
+				  choix);
+	  if(selection == 0)
+	    sudoku = genererGrille(FACILE);
+	  else if(selection == 1)
+	    sudoku = genererGrille(MOYEN);
+	  else if(selection == 2)
+	    sudoku = genererGrille(DIFFICILE);
+	  else if(selection == 3)
 	    sudoku = initGrille();
 	  bouton = NULL;
-	  apresAlerte(sudoku);
+	  if(selection >= 0 && selection <= 3)
+	    peindreTout(sudoku);
+	  else
+	    apresAlerte(sudoku);
 	}
 	else if(x >= ouvrir.x && x <= ouvrir.x+32){
 	  bouton = &ouvrir;
@@ -252,12 +273,21 @@ void positionCase(int lig, int col, int * x, int * y){
 void majEcran(Sudoku s){
   for(int i = 0; i < 9; i++){
     for(int j = 0; j < 9; j++){
-      int code = s.grille[i][j] * 2 + (s.fixe[i][j] ? 1 : 0);
+      int style = 0;
+      if(s.grille[i][j] != 0){
+	if(s.donnee[i][j])
+	  style = 2;
+	else
+	  style = 1;
+      }
+      int code = s.grille[i][j] * 3 + style;
       if(code == ecran[i][j])
 	continue;
       int x, y;
       positionCase(i, j, &x, &y);
-      if(s.fixe[i][j])
+      if(s.grille[i][j] == 0)
+	b[0].up->affiche(x, y);
+      else if(s.donnee[i][j])
 	b[s.grille[i][j]].down->affiche(x, y);
       else
 	b[s.grille[i][j]].up->affiche(x, y);
@@ -310,5 +340,6 @@ void restaurerZone(int x, int y, int larg, int haut){
 
 void apresAlerte(Sudoku s){
   restaurerZone(DIAL_X, DIAL_Y, DIAL_W, DIAL_H);
+  restaurerZone(GEN_X, GEN_Y, GEN_W, GEN_H);
   majEcran(s);
 }

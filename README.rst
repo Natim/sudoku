@@ -2,8 +2,8 @@
 Sudoku Solveur
 ==============
 
-Encore un projet sans algorithme complet. Voici quand même les grandes lignes
-de ce projet.
+Encore un projet longtemps sans generateur complet. Voici quand même les
+grandes lignes de ce projet.
 
 L'interface a été beaucoup travaillée, avec la création d'une classe
 (``Bitmap.class.*``) pour lire les fichiers bitmaps 8 bits. Une erreur de
@@ -14,10 +14,10 @@ utiliser le fichier ``launch.sh``.
 L'interface fonctionne aussi avec 3 fonctions pour afficher et gérer les
 boites de dialogues.
 
-Un ensemble de fonctions permet de gérer les sudokus et de les résoudre. On
-peut enregistrer un sudoku dans un fichier et ouvrir la grille par la suite.
-Mais aussi le résoudre, et placer les chiffres en vérifiant s'ils sont bien à
-la bonne place.
+Un ensemble de fonctions permet de gérer les sudokus, de les résoudre et
+d'en generer de nouvelles. On peut enregistrer un sudoku dans un fichier et
+ouvrir la grille par la suite. Mais aussi le résoudre, et placer les chiffres
+en vérifiant s'ils sont bien à la bonne place.
 
 Enfin, le programme en lui même gère l'interface entre l'utilisateur et le
 sudoku.
@@ -70,16 +70,39 @@ case et on recule d'une case. Et ce, tant que le sudoku n'est pas résolu.
 
 Si l'on sort du sudoku en 0,0, c'est que le sudoku n'a pas de solution.
 
+2.2/ Le generateur
+------------------
+
+Le bouton « Nouveau » propose des grilles jouables en trois niveaux, plus une
+grille vierge. Chaque grille generee respecte les regles du jeu et n'admet
+qu'une seule solution.
+
+La methode part d'une grille complete tiree au hasard, puis creuse des cases
+deux a deux en symetrie centrale. Un trou n'est conserve que si la grille
+incomplete garde exactement une solution ; sinon les chiffres sont remis en
+place. Les niveaux visent environ 45 indices (facile), 34 (moyen) et 28
+(difficile).
+
+Le comptage de solutions et le remplissage aleatoire passent par un solveur
+dedie a masques de bits, plus rapide que ``resolve()`` pour enchainer les
+verifications. Les tirages aleatoires sont centralises dans ``alea.h``
+(``hasard``, ``melanger``, ``moteurAleatoire``).
+
+Les indices generes sont marques ``donnee`` : ils s'affichent comme des
+indices fixes et ne peuvent pas etre effaces par le joueur.
+
 3/ Les boites de dialogues
 ==========================
 
-Elles rajoutent un plus au programme, et retournent juste ``true`` si l'on
-clique sur « oui » et ``false`` dans le cas contraire. Ceci est relativement
-simple, et permet de gérer simplement l'interface utilisateur.
+Elles rajoutent un plus au programme. ``alert()`` retourne ``true`` si l'on
+clique sur « oui » et ``false`` dans le cas contraire. ``choisir()`` affiche
+plusieurs boutons et renvoie l'indice clique. Ceci permet de gérer simplement
+l'interface utilisateur, y compris le choix de la difficulte d'une nouvelle
+grille.
 
-Sur ce sudoku, vous pouvez créer une grille vierge, ouvrir un sudoku
-enregistré, enregistrer une grille, mettre les chiffres dans les cases,
-résoudre la grille et quitter.
+Sur ce sudoku, vous pouvez generer une grille, en ouvrir une enregistree,
+enregistrer une grille, mettre les chiffres dans les cases, resoudre la
+grille et quitter.
 
 ----
 
