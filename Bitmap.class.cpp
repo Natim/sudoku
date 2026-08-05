@@ -4,7 +4,7 @@
 // Avec Graphlib
 //-----------------------------------------------------//
 // Auteur : Natim
-// Date de derniËre modification : 18-04-2006
+// Date de derni√®re modification : 18-04-2006
 //-----------------------------------------------------//
 #include "Bitmap.class.h"
 #include "Fenetre.h"
@@ -94,12 +94,12 @@ void Bitmap::invaliderTout(){
   }
 }
 
-// Charge un fichier bitmap d'un fichier dans la mÈmoire
+// Charge un fichier bitmap d'un fichier dans la m√©moire
 bool Bitmap::loadBMP(const char *file) {
-  FILE * in = NULL;             // Descripteur de l'image ‡ lire
+  FILE * in = NULL;             // Descripteur de l'image √† lire
   nom = file;            // Stockage du nom du fichier
   
-  // On verifie qu'une image n'a pas dÈj‡ ÈtÈ chargÈe dans cette instance
+  // On verifie qu'une image n'a pas d√©j√† √©t√© charg√©e dans cette instance
   delete[] couleurs;
   couleurs = NULL;
   delete[] donnees;
@@ -110,13 +110,13 @@ bool Bitmap::loadBMP(const char *file) {
   // On ouvre le fichier en lecture binaire
   in = fopen(file, "rb");
   
-  // Si la lecture n'a pas fonctionnÈe, on returne un signal d'erreur
+  // Si la lecture n'a pas fonctionn√©e, on returne un signal d'erreur
   if(in == NULL) {
     cerr << "Impossible d'ouvrir le fichier " << file << endl;
     return false;
   }
   
-  // On lit l'integralitÈ de l'entete du fichier bitmap
+  // On lit l'integralit√© de l'entete du fichier bitmap
   if(fread(&bmfh, sizeof(BitmapFileHeader), 1, in) != 1) {
     cerr << "Entete de fichier illisible dans " << file << endl;
     fclose(in);
@@ -130,7 +130,7 @@ bool Bitmap::loadBMP(const char *file) {
     return false;
   }
   
-  // On lit les informations d'entÍte
+  // On lit les informations d'ent√™te
   if(fread(&bmih, sizeof(BitmapInfoHeader), 1, in) != 1) {
     cerr << "Entete bitmap illisible dans " << file << endl;
     fclose(in);
@@ -145,10 +145,10 @@ bool Bitmap::loadBMP(const char *file) {
   cerr << nom << "\t:\t" << width << "x" << height << " - " << bpp << "bits" << endl;
 
 
-  // On calcule la taille des donnÈes avec la rÈsolution
+  // On calcule la taille des donn√©es avec la r√©solution
   tailleDonnees = (width * height * (unsigned int) ceil(bpp/8.0));
   
-  // On dÈduit le nombre de couleurs
+  // On d√©duit le nombre de couleurs
   nbCouleurs = (bmih.biClrUsed != 0) ? bmih.biClrUsed : 256;
 
   // Si le fichier n'est pas en 8 bits par pixel, on ne sait pas le lire
@@ -169,7 +169,7 @@ bool Bitmap::loadBMP(const char *file) {
     return false;
   }
 
-  // On crÈe la palette graphlib en RVB
+  // On cr√©e la palette graphlib en RVB
   int sommeMax = -1, sommeMin = 3 * 255 + 1;
   indexBlanc = indexNoir = 0;
   for(int i = 0; i < nbCouleurs; i++){
@@ -192,9 +192,9 @@ bool Bitmap::loadBMP(const char *file) {
   // On alloue un tableau pour charger l'image
   donnees = new char[tailleDonnees];
   
-  // On verifie que l'allocation s'est bien passÈe
+  // On verifie que l'allocation s'est bien pass√©e
   if(donnees == NULL) {
-    cerr << "Pas assez de mÈmoire pour charger le fichier" << endl;
+    cerr << "Pas assez de m√©moire pour charger le fichier" << endl;
     fclose(in);
     return false;
   }
@@ -217,7 +217,7 @@ bool Bitmap::loadBMP(const char *file) {
     padWidth++;
   }
   
-  // Tout c'est bien passÈ
+  // Tout c'est bien pass√©
   return true;
 }
 

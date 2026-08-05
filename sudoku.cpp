@@ -6,7 +6,7 @@ extern "C"{
 #include "BoiteDialogue.h"
 #include "Fenetre.h"
 
-// Définition des types //
+// DÃ©finition des types //
 typedef struct{
   Bitmap * up;
   Bitmap * down;
@@ -49,7 +49,7 @@ void apresAlerte(Sudoku s);
 
 int main(){
   srand(time(NULL));
-  int x, y;               // Coordonnée de la souris
+  int x, y;               // CoordonnÃ©e de la souris
   int lig, col;
   bool quitter = false;
 
@@ -58,7 +58,7 @@ int main(){
   sudokuAffiche = &sudoku;
   definirRepeindreFond(repeindreTout);
 
-  ouvrirFenetreAdaptable(FENETRE, FENETRE, "Sudoku - Rémy HUBSCHER(c)");
+  ouvrirFenetreAdaptable(FENETRE, FENETRE, "Sudoku - RÃ©my HUBSCHER(c)");
   peindreTout(sudoku);
 
   while(!quitter){
@@ -70,7 +70,7 @@ int main(){
       if(y >= 7 && y <= 39){ // On est dans la zone du menu
 	if(x >= nouv.x && x <= nouv.x+32){
 	  bouton = &nouv;
-	  // Ici, on génére une grille vierge
+	  // Ici, on gÃ©nÃ©re une grille vierge
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment initialiser la grille ?"))
 	    sudoku = initGrille();
 	  bouton = NULL;
@@ -78,7 +78,7 @@ int main(){
 	}
 	else if(x >= ouvrir.x && x <= ouvrir.x+32){
 	  bouton = &ouvrir;
-	  // Ici, on génére une grille jouable
+	  // Ici, on gÃ©nÃ©re une grille jouable
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment charger une grille ?"))
 	    sudoku = chargerGrille("grille.sdk");
 	  bouton = NULL;
@@ -87,10 +87,10 @@ int main(){
 	else if(x >= rec.x && x <= rec.x+32){
 	  bouton = &rec;
 	  // Ici on enregistre le sudoku en PDF
-	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment enregistrer la grille ? La grille précédente sera effacée")){
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment enregistrer la grille ? La grille prÃ©cÃ©dente sera effacÃ©e")){
 	    if(!sauvegarderGrille(sudoku, "grille.sdk")){
 	      alert(DIAL_X, DIAL_Y, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdk ?");
-	      alert(DIAL_X, DIAL_Y, "Il serait bon de vérifier");
+	      alert(DIAL_X, DIAL_Y, "Il serait bon de vÃ©rifier");
 	    }
 	  }
 	  bouton = NULL;
@@ -98,7 +98,7 @@ int main(){
 	}
 	else if(x >= aide.x && x <= aide.x+32){
 	  bouton = &aide;
-	  // Ici, on affiche les règles du jeu
+	  // Ici, on affiche les rÃ¨gles du jeu
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment avoir la solution ?")){
 	    if(!resolve(&sudoku)){
 	      if(alert(DIAL_X, DIAL_Y, "Aucune solution. Initialiser la grille ?"))
@@ -118,7 +118,7 @@ int main(){
 	}
 	menu();
       }else{
-	// On a cliqué sur la grille mais sur quelle case ? //
+	// On a cliquÃ© sur la grille mais sur quelle case ? //
 	col = (((x - DECALX_GRILLE) / 182) * 3 + ((x - DECALX_GRILLE) % 182) / 52);
 	if(col > 8) col = 8;
 	if(col < 0) col = 0;

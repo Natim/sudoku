@@ -3,7 +3,7 @@
 // Prototype de la classe Bitmap pour ouvrir un bitmap
 //-----------------------------------------------------//
 // Auteur : Natim
-// Date de dernière modification : 18-04-2006
+// Date de derniÃ¨re modification : 18-04-2006
 //-----------------------------------------------------//
 #ifndef __BITMAP_H_
 #define __BITMAP_H_
@@ -56,7 +56,7 @@ public:
 
     int width,height,nbCouleurs;
 
-    // Méthodes
+    // MÃ©thodes
     Bitmap(void);
     Bitmap(const char *);
     ~Bitmap();
@@ -80,11 +80,11 @@ private:
     RVBCoul       * couleurs;
     char          * donnees;
     unsigned char * pal;
-    unsigned int tailleDonnees;    // La taille des données bitmap
+    unsigned int tailleDonnees;    // La taille des donnÃ©es bitmap
     unsigned short bpp;
 
     int byteWidth;                 // La taille en bytes de l'image
-    int padWidth;                  // La taille en bytes de l'image modifiée
+    int padWidth;                  // La taille en bytes de l'image modifiÃ©e
     int copieX, copieY;            // -1 when no valid master tile on screen
     int copieL, copieH;            // taille en pixels ecran de cette copie
     int indexBlanc, indexNoir;     // Indices palette du blanc et du noir

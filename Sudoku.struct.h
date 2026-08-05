@@ -1,10 +1,10 @@
 //------------------------------------------------------//
 // Sudoku.struct.cpp
-// Structure Sudoku et ses fonctions pour rÈsoudre et 
-// gÈnÈrer des grilles de sudoku
+// Structure Sudoku et ses fonctions pour r√©soudre et 
+// g√©n√©rer des grilles de sudoku
 //-----------------------------------------------------//
 // Auteur : Natim
-// Date de derniËre modification : 12-05-2006
+// Date de derni√®re modification : 12-05-2006
 //-----------------------------------------------------//
 
 #include <iostream>
@@ -25,48 +25,48 @@ typedef struct{
 } Sudoku;
 
 /***************************
- ** CrÈation de Sudoku de **
- ** diffÈrents types      **
+ ** Cr√©ation de Sudoku de **
+ ** diff√©rents types      **
  ***************************/
 Sudoku initGrille();
 /* Initialise une grille vierge de Sudoku */
 
 /*****************************
- ** Fonction de rÈsolutions **
+ ** Fonction de r√©solutions **
  *****************************/
 bool testerL(Sudoku s, int lig, int col);
-/* Teste si le nombre posx, posy n'est pas dÈj‡ dans la ligne */
+/* Teste si le nombre posx, posy n'est pas d√©j√† dans la ligne */
 
 bool testerC(Sudoku s, int lig, int col);
-/* Teste si le nombre posx, posy n'est pas dÈj‡ dans la colonne */
+/* Teste si le nombre posx, posy n'est pas d√©j√† dans la colonne */
 
 bool testerR(Sudoku s, int lig, int col);
-/* Teste si le nombre posx, posy n'est pas dÈj‡ dans la rÈgion */
+/* Teste si le nombre posx, posy n'est pas d√©j√† dans la r√©gion */
 
 bool tester(Sudoku s, int lig, int col);
-/* Test si on peut placer le nombre posx,posy ‡ cette place */
+/* Test si on peut placer le nombre posx,posy √† cette place */
 
 int go(Sudoku * s, bool sens);
 /* 
-   UtilisÈ par la fonction resolve,
+   Utilis√© par la fonction resolve,
    Cette fonction avance ou recule d'une case
 */
 
 bool fin(Sudoku s);
 /*
-  Retourne true si le Sudoku est rÈsolu
+  Retourne true si le Sudoku est r√©solu
 */
 
 bool resolve(Sudoku * s);
 /* 
-   RÈsoud le Sudoku s 
+   R√©soud le Sudoku s 
    Retourne true s'il y a une solution et false sinon
 */
 /*************************
- ** Fonction de plaÁage **
+ ** Fonction de pla√ßage **
  *************************/
 bool placer(Sudoku * s, int lig, int col, int nb);
-/* Essaye de placer le nombre, nb, ‡ la position, pos, du Sudoku, s. */
+/* Essaye de placer le nombre, nb, √† la position, pos, du Sudoku, s. */
 
 
 void afficherSudoku(Sudoku s);
