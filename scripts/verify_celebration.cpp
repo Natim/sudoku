@@ -8,16 +8,13 @@ extern "C"{
 #include "bitmap.h"
 #include "celebration.h"
 #include "generator.h"
+#include "paths.h"
 #include "score.h"
 #include "sudoku_grid.h"
 #include "window.h"
 
 #include <cstdlib>
 #include <string>
-
-#ifndef SUDOKU_ASSETS_DIR
-#define SUDOKU_ASSETS_DIR "assets"
-#endif
 
 static const int GRID_X = 50;
 static const int GRID_Y = 74;
@@ -47,7 +44,7 @@ int main(int argc, char ** argv){
   const int seconds = (argc > 1) ? atoi(argv[1]) : 300;
 
   for(int i = 0; i < 10; i++){
-    std::string base = std::string(SUDOKU_ASSETS_DIR) + "/images/" + std::to_string(i);
+    std::string base = assetsDir() + "/images/" + std::to_string(i);
     up[i] = new Bitmap((base + ".bmp").c_str());
     down[i] = new Bitmap((base + "d.bmp").c_str());
   }

@@ -115,7 +115,41 @@ solve, exactly the base for a grid solved in the time it was expected to take,
 and less and less after that without ever reaching zero. The three stars
 compare the time taken with the time expected.
 
-----
+5/ Installing
+=============
 
-If you get the chance, I can only suggest looking at the Sudokus by Germain
-Desvignes and Rémy Burney, who both did excellent work on this project.
+Every release carries two files, both for Linux on x86_64 since the graphlib
+that comes with the project is a prebuilt library. The Debian package puts the
+game, its images, its icon and its menu entry under ``/usr``::
+
+  sudo apt install ./sudoku_1.0.0_amd64.deb
+
+The archive holds the same tree and is unpacked wherever you like: the program
+looks for its images from its own location, so it needs no install step and no
+particular working directory::
+
+  tar xzf sudoku-1.0.0-linux-x86_64.tar.gz
+  ./sudoku-1.0.0-linux-x86_64/bin/sudoku
+
+``SUDOKU_ASSETS_DIR`` in the environment overrides that search, should you keep
+the images elsewhere.
+
+``make package`` builds both files in ``build-package/``. That is what the
+release workflow does before checking that each of them starts and reads its
+images on a headless display; it is started by hand from the Actions tab, with
+the version to publish.
+
+An installed game saves grids in ``~/.local/share/sudoku/grille.sdk``. A
+``grille.sdk`` in the current directory is used instead when there is one, which
+is the case in the source tree.
+
+6/ Licence
+==========
+
+The code of this repository is under the MIT licence, in ``LICENSE``.
+
+``third_party/graphlib`` is not mine and carries no licence text: it is the
+teaching library the project was written against, kept here as a prebuilt
+static library so that the game still compiles. The MIT licence covers the
+sources around it, not that library, and it is the one thing to settle before
+handing out binaries widely, since a release embeds it in the executable.

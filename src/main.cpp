@@ -6,6 +6,7 @@ extern "C"{
 #include "generator.h"
 #include "celebration.h"
 #include "dialog_box.h"
+#include "paths.h"
 #include "score.h"
 #include "window.h"
 
@@ -14,12 +15,8 @@ extern "C"{
 #include <vector>
 #include <cstdlib>
 
-#ifndef SUDOKU_ASSETS_DIR
-#define SUDOKU_ASSETS_DIR "assets"
-#endif
-
 static std::string asset(const std::string & name){
-  return std::string(SUDOKU_ASSETS_DIR) + "/images/" + name;
+  return assetsDir() + "/images/" + name;
 }
 
 typedef struct{
@@ -108,7 +105,7 @@ int main(){
 	else if(x >= openBtn.x && x <= openBtn.x+32){
 	  pressed = &openBtn;
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment charger une grille ?")){
-	    sudoku = loadGrid("grille.sdk");
+	    sudoku = loadGrid(savedGridPath().c_str());
 	    startGrid(sudoku);
 	  }
 	  pressed = NULL;
@@ -117,7 +114,8 @@ int main(){
 	else if(x >= saveBtn.x && x <= saveBtn.x+32){
 	  pressed = &saveBtn;
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment enregistrer la grille ? La grille précédente sera effacée")){
-	    if(!saveGrid(sudoku, "grille.sdk")){
+	    createSavedGridDirectory();
+	    if(!saveGrid(sudoku, savedGridPath().c_str())){
 	      alert(DIAL_X, DIAL_Y, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdk ?");
 	      alert(DIAL_X, DIAL_Y, "Il serait bon de vérifier");
 	    }

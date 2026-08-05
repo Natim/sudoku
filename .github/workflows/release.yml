@@ -1,0 +1,65 @@
+# Builds the Debian package and the portable archive, checks that both find
+# their images, and attaches them to a GitHub release.
+#
+# Started by hand for now. Adding
+#   push:
+#     tags: [ "v*" ]
+# below would publish a release out of every tag.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, as 1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    # The glibc of the runner sets the oldest distribution the binary runs on:
+    # 22.04 reaches Ubuntu 22.04 and Debian 12 upwards.
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Install the build and test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libx11-dev xvfb xauth
+
+    - name: Read the version
+      run: |
+        version="${{ inputs.version }}"
+        echo "VERSION=${version#v}" >> "$GITHUB_ENV"
+
+    - name: Build the package and the archive
+      run: make package VERSION="$VERSION"
+
+    # Before installing the package, so that the archive cannot pass on images
+    # the package left in /usr/share.
+    - name: Check the archive where it is unpacked
+      run: |
+        mkdir -p /tmp/unpacked
+        tar -C /tmp/unpacked -xzf "build-package/sudoku-$VERSION-linux-x86_64.tar.gz"
+        scripts/smoke_test.sh "/tmp/unpacked/sudoku-$VERSION-linux-x86_64/bin/sudoku"
+
+    - name: Check the package once installed
+      run: |
+        sudo apt-get install -y "./build-package/sudoku_${VERSION}_amd64.deb"
+        test -f /usr/share/applications/sudoku.desktop
+        test -f /usr/share/icons/hicolor/scalable/apps/sudoku.svg
+        scripts/smoke_test.sh /usr/bin/sudoku
+
+    - name: Publish the release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh release create "v$VERSION" \
+          --title "Sudoku $VERSION" \
+          --generate-notes \
+          "build-package/sudoku_${VERSION}_amd64.deb" \
+          "build-package/sudoku-$VERSION-linux-x86_64.tar.gz"
