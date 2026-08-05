@@ -29,7 +29,6 @@ typedef struct{
 // Constantes //
 const int DECALX_GRILLE = 50;
 const int DECALY_GRILLE = 74;
-const int LARGEUR_3CASES= 104;
 const int FENETRE = 600;
 const int DIAL_W = 300;
 const int DIAL_H = 100;

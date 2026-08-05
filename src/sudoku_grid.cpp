@@ -220,7 +220,9 @@ void afficherSudoku(Sudoku s){
 
 int hasard(int nb){
 /* Retourne un nombre entre 0 et nb */
-  return (int) ((float) rand() / RAND_MAX * (nb + 1));
+  /* Division entiere en nb + 1 tranches : passer par un float arrondirait
+     RAND_MAX au-dessus de sa valeur et laisserait sortir nb + 1. */
+  return rand() / (RAND_MAX / (nb + 1) + 1);
 }
 
 Sudoku lireGrille(){
