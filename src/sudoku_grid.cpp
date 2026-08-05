@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <string>
 
 using namespace std;
 
@@ -207,27 +208,49 @@ Sudoku readGrid(){
   return s;
 }
 
+// The grid on one line, one character per cell and row after row, as sudoku
+// programs pass puzzles around. A digit is a clue, 0 or a dot an empty cell.
+static const int LINE_LENGTH = SIZE * SIZE;
+
+static bool gridFromLine(const string & line, Sudoku * s){
+  Sudoku read = emptyGrid();
+
+  for(int i = 0; i < LINE_LENGTH; i++){
+    const char c = line[i];
+    if(c == '0' || c == '.')
+      continue;
+    if(c < '1' || c > '9')
+      return false;
+
+    // A digit the rules refuse leaves the cell empty rather than fixed on a
+    // value the player could never have reached.
+    const int row = i / SIZE, col = i % SIZE;
+    if(place(&read, row, col, c - '0')){
+      read.fixed[row][col] = true;
+      read.given[row][col] = true;
+    }
+  }
+
+  *s = read;
+  return true;
+}
+
 Sudoku loadGrid(const char * path){
   ifstream file;
-  int value;
-  int i, j;
-
-  Sudoku s = emptyGrid();
+  string line;
 
   file.open(path, ios::in);
   if(!file.good())
     return emptyGrid();
 
-  for(i = 0; i < 9; i++)
-    for(j = 0; j < 9; j++)
-      if(!file.eof()){
-	file >> value;
-	place(&s, i, j, value);
-	if(value != 0){
-	  s.fixed[i][j] = true;
-	  s.given[i][j] = true;
-	}
-      }
+  // A file holds one grid per line, and comments opening on a hash: read the
+  // first line long enough to be a grid.
+  Sudoku s = emptyGrid();
+  while(getline(file, line))
+    if(line.size() >= (size_t) LINE_LENGTH && line[0] != '#')
+      if(gridFromLine(line, &s))
+	break;
+
   file.close();
   return s;
 }
@@ -235,11 +258,14 @@ Sudoku loadGrid(const char * path){
 bool saveGrid(Sudoku s, const char * path){
   ofstream file;
   int i, j;
+
   file.open(path, ios::out);
-  if(file.good())
-    for(i = 0; i < 9; i++)
-      for(j = 0; j < 9; j++)
-	file << s.cells[i][j] << endl;
+  if(file.good()){
+    for(i = 0; i < SIZE; i++)
+      for(j = 0; j < SIZE; j++)
+	file << (char) ('0' + s.cells[i][j]);
+    file << endl;
+  }
   file.close();
   return file.good();
 }

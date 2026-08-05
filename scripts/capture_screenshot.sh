@@ -8,7 +8,7 @@ cd "$ROOT"
 cmake --build build --target sudoku write_sample_grid >/dev/null
 ./build/write_sample_grid
 
-SUDOKU_AUTO_LOAD=grille.sdk ./build/sudoku &
+SUDOKU_AUTO_LOAD=grille.sdm ./build/sudoku &
 PID=$!
 trap 'kill "$PID" 2>/dev/null || true' EXIT
 

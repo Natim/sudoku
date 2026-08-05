@@ -116,7 +116,7 @@ int main(){
 	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment enregistrer la grille ? La grille précédente sera effacée")){
 	    createSavedGridDirectory();
 	    if(!saveGrid(sudoku, savedGridPath().c_str())){
-	      alert(DIAL_X, DIAL_Y, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdk ?");
+	      alert(DIAL_X, DIAL_Y, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdm ?");
 	      alert(DIAL_X, DIAL_Y, "Il serait bon de vérifier");
 	    }
 	  }

@@ -86,6 +86,23 @@ than ``resolve()`` for chaining checks. Random draws are centralized in
 Generated clues are marked ``given``: they display as fixed clues and cannot
 be erased by the player.
 
+2.3/ The file format
+--------------------
+
+A grid is a single line of 81 characters, cell by cell and row after row, with
+``0`` for an empty cell::
+
+  010078000080040900005600010100060005040915072067080400000300100070890023000004000
+
+That is how sudoku programs pass puzzles around, so ``grille.sdm`` opens in
+other solvers and the puzzle collections published in that form open here.
+Reading also accepts the dot other programs write for an empty cell, and walks
+past comment lines opening on a ``#`` to the first grid of a file holding
+several.
+
+Nothing tells the clues from the digits the player placed, in this format as in
+the others: everything read back is a clue.
+
 3/ Dialog boxes
 ==========================
 
@@ -139,8 +156,8 @@ release workflow does before checking that each of them starts and reads its
 images on a headless display; it is started by hand from the Actions tab, with
 the version to publish.
 
-An installed game saves grids in ``~/.local/share/sudoku/grille.sdk``. A
-``grille.sdk`` in the current directory is used instead when there is one, which
+An installed game saves grids in ``~/.local/share/sudoku/grille.sdm``. A
+``grille.sdm`` in the current directory is used instead when there is one, which
 is the case in the source tree.
 
 6/ Licence

@@ -17,7 +17,7 @@ using namespace std;
 
 namespace {
 
-const char * GRID_FILE = "grille.sdk";
+const char * GRID_FILE = "grille.sdm";
 
 string environment(const char * name){
   const char * value = getenv(name);

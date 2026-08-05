@@ -1,4 +1,4 @@
-// Write a generated grid to grille.sdk for screenshots.
+// Write a generated grid to grille.sdm for screenshots.
 #include "generator.h"
 #include "sudoku_grid.h"
 
@@ -6,8 +6,8 @@
 
 int main(){
   Sudoku s = generateGrid(MEDIUM);
-  if(!saveGrid(s, "grille.sdk")){
-    std::fprintf(stderr, "cannot write grille.sdk\n");
+  if(!saveGrid(s, "grille.sdm")){
+    std::fprintf(stderr, "cannot write grille.sdm\n");
     return 1;
   }
   return 0;
