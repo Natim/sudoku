@@ -9,6 +9,7 @@ extern "C"{
 
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #ifndef SUDOKU_ASSETS_DIR
 #define SUDOKU_ASSETS_DIR "assets"
@@ -69,6 +70,8 @@ int main(){
 
   alloueBmp();            // Alloue les bitmaps
   Sudoku sudoku = initGrille();
+  if(const char * chemin = std::getenv("SUDOKU_AUTO_LOAD"))
+    sudoku = chargerGrille(chemin);
   sudokuAffiche = &sudoku;
   definirRepeindreFond(repeindreTout);
 

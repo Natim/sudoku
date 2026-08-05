@@ -2,8 +2,12 @@
 Sudoku Solveur
 ==============
 
-Encore un projet longtemps sans generateur complet. Voici quand même les
-grandes lignes de ce projet.
+
+.. image:: docs/screenshot.png
+   :alt: Interface du solveur Sudoku
+   :align: center
+
+Voici les grandes lignes de ce projet.
 
 L'interface a été beaucoup travaillée, avec la création d'une classe
 (``Bitmap.class.*``) pour lire les fichiers bitmaps 8 bits. Une erreur de
