@@ -64,8 +64,15 @@ public:
     bool loadBMP(const char *);
     void affiche(int x, int y);
     void initPal();
+    void remplirFond(int x1, int y1, int x2, int y2);
+    static void invaliderZone(int x1, int y1, int x2, int y2);
+    static void invaliderTout();
 
 private:
+    void dessinePixels(int x, int y);
+    void enregistrer();
+    void desenregistrer();
+
     // Attributs
     BitmapFileHeader bmfh;
     BitmapInfoHeader bmih;
@@ -77,6 +84,11 @@ private:
 
     int byteWidth;                 // La taille en bytes de l'image
     int padWidth;                  // La taille en bytes de l'image modifiée
+    int copieX, copieY;            // -1 when no valid master tile on screen
+    int indexBlanc, indexNoir;     // Indices palette du blanc et du noir
+
+    static Bitmap * instances[64];
+    static int nbInstances;
 };
 
 #endif //__BITMAP_H_

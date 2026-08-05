@@ -14,11 +14,18 @@ extern "C"{
 #include "lib/graphlib.h"
 }
 
+Bitmap * Bitmap::instances[64];
+int Bitmap::nbInstances = 0;
+
 // Constructeur de base
 Bitmap::Bitmap(){
   couleurs = NULL;
   donnees  = NULL;
   pal      = NULL;
+  width = height = 0;
+  copieX = copieY = -1;
+  indexBlanc = indexNoir = 0;
+  enregistrer();
 }
 
 // Constructeur permettant de charger un fichier
@@ -26,11 +33,15 @@ Bitmap::Bitmap(const char *file){
   couleurs = NULL;
   donnees  = NULL;
   pal      = NULL;
+  copieX = copieY = -1;
+  indexBlanc = indexNoir = 0;
   loadBMP(file);
+  enregistrer();
 }
 
 // Destructeur de la classe
 Bitmap::~Bitmap(){
+  desenregistrer();
   if(couleurs != NULL) {
     delete[] couleurs;
   }
@@ -39,6 +50,38 @@ Bitmap::~Bitmap(){
   }
   if(pal  != NULL){
     delete[] pal;
+  }
+}
+
+void Bitmap::enregistrer(){
+  if(nbInstances < 64)
+    instances[nbInstances++] = this;
+}
+
+void Bitmap::desenregistrer(){
+  for(int i = 0; i < nbInstances; i++){
+    if(instances[i] == this){
+      instances[i] = instances[--nbInstances];
+      return;
+    }
+  }
+}
+
+void Bitmap::invaliderZone(int x1, int y1, int x2, int y2){
+  for(int i = 0; i < nbInstances; i++){
+    Bitmap * bmp = instances[i];
+    if(bmp->copieX < 0)
+      continue;
+    if(bmp->copieX + bmp->width > x1 && bmp->copieX < x2 &&
+       bmp->copieY + bmp->height > y1 && bmp->copieY < y2)
+      bmp->copieX = bmp->copieY = -1;
+  }
+}
+
+void Bitmap::invaliderTout(){
+  for(int i = 0; i < nbInstances; i++){
+    instances[i]->copieX = -1;
+    instances[i]->copieY = -1;
   }
 }
 
@@ -118,11 +161,23 @@ bool Bitmap::loadBMP(const char *file) {
   }
 
   // On crée la palette graphlib en RVB
+  int sommeMax = -1, sommeMin = 3 * 255 + 1;
+  indexBlanc = indexNoir = 0;
   for(int i = 0; i < nbCouleurs; i++){
     pal[i*3]   = couleurs[i].rvbRouge;
     pal[i*3+1] = couleurs[i].rvbVert;
     pal[i*3+2] = couleurs[i].rvbBleu;
     //    pal[i*4+3] = couleurs[i].rvbReserve;
+
+    int somme = pal[i*3] + pal[i*3+1] + pal[i*3+2];
+    if(somme > sommeMax){
+      sommeMax = somme;
+      indexBlanc = i;
+    }
+    if(somme < sommeMin){
+      sommeMin = somme;
+      indexNoir = i;
+    }
   }
   
   // On alloue un tableau pour charger l'image
@@ -157,16 +212,60 @@ bool Bitmap::loadBMP(const char *file) {
   return true;
 }
 
-void Bitmap::affiche(int x, int y) {
-  initPal(); //Initialisation de la palette
-  unsigned int i;
-
-  for(i = 0; i < tailleDonnees; i++){
-    modifierCouleur((unsigned int) donnees[i]%nbCouleurs);
-    afficherPoint(x + i%padWidth, y + height-1 - i/padWidth);
+/* Un trace par suite de pixels de meme couleur : les glyphes sont surtout
+   composes d'aplats, ce qui evite un aller-retour avec le serveur X par
+   pixel. */
+void Bitmap::dessinePixels(int x, int y){
+  initPal();
+  for(int row = 0; row < height; row++){
+    // La premiere ligne du fichier bitmap est celle du bas de l'image.
+    int yy = y + height - 1 - row;
+    int col = 0;
+    while(col < width){
+      unsigned char idx = (unsigned char) donnees[row * padWidth + col];
+      idx = idx % nbCouleurs;
+      int runStart = col;
+      while(col + 1 < width &&
+            (unsigned char) donnees[row * padWidth + col + 1] % nbCouleurs == idx)
+        col++;
+      modifierCouleur(idx);
+      tracerLigne(x + runStart, yy, x + col, yy);
+      col++;
+    }
   }
+}
+
+/* Tant qu'une copie de l'image est intacte a l'ecran, l'afficher ailleurs ne
+   coute que trois requetes de copie ; sinon il faut la redessiner. */
+void Bitmap::affiche(int x, int y) {
+  bool tuile = (copieX >= 0);
+  if(tuile)
+    recupereSousImage(copieX, copieY, copieX + width, copieY + height);
+
+  invaliderZone(x, y, x + width, y + height);
+
+  if(tuile)
+    afficheSousImage(x, y);
+  else
+    dessinePixels(x, y);
+
+  copieX = x;
+  copieY = y;
 }
 
 void Bitmap::initPal(){
   initPalette(pal, nbCouleurs); //Initialisation de la palette
+}
+
+/* remplirRectangle peint la fenetre et le double buffer avec la couleur
+   d'avant-plan courante : on la force au blanc de la palette, puis on
+   restaure le noir pour ne pas perturber les traces suivants.
+
+   Le remplissage s'arrete un pixel avant x2 alors que tracerRectangle dessine
+   son contour sur x2 : on ajoute ce pixel pour effacer aussi les contours. */
+void Bitmap::remplirFond(int x1, int y1, int x2, int y2){
+  initPal();
+  modifierCouleur(indexBlanc);
+  remplirRectangle(x1, y1, x2 + 1, y2 + 1);
+  modifierCouleur(indexNoir);
 }

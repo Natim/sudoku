@@ -4,7 +4,6 @@ extern "C"{
 #include "Bitmap.class.h"
 #include "Sudoku.struct.h"
 #include "BoiteDialogue.h"
-#include <unistd.h>
 
 // Définition des types //
 typedef struct{
@@ -19,6 +18,10 @@ const int DECALX_GRILLE = 50;
 const int DECALY_GRILLE = 74;
 const int LARGEUR_3CASES= 104;
 const int FENETRE = 600;
+const int DIAL_W = 300;
+const int DIAL_H = 100;
+const int DIAL_X = (FENETRE - DIAL_W) / 2;
+const int DIAL_Y = (FENETRE - DIAL_H) / 2;
 
 // Variable Globale //
 Bouton nouv;
@@ -29,14 +32,17 @@ Bouton fermer;
 Bouton erreur;
 Bouton * b;
 Bouton * bouton = NULL;   // Bouton sur lequel on appuie
+int ecran[9][9];
 
 // Prototypes //
 void alloueBmp();
 void desalloueBmp();
-void afficheSudoku(Sudoku s);
-void affiche(int x, int y, int nb);
 void menu();
-void refresh(Sudoku s);
+void positionCase(int lig, int col, int * x, int * y);
+void majEcran(Sudoku s);
+void peindreTout(Sudoku s);
+void restaurerZone(int x, int y, int larg, int haut);
+void apresAlerte(Sudoku s);
 
 int main(){
   srand(time(NULL));
@@ -48,51 +54,52 @@ int main(){
   Sudoku sudoku = initGrille();
 
   ouvrirFenetreTailleTitre(FENETRE, FENETRE, (char *) "Sudoku - Rémy HUBSCHER(c)");
-  refresh(sudoku);
+  peindreTout(sudoku);
 
   while(!quitter){
-      // positionSouris() attend elle-même le clic et en fournit la position.
       positionSouris(&x, &y);
-      
+      testerFenetre();
+
       if(y >= 7 && y <= 39){ // On est dans la zone du menu
 	if(x >= nouv.x && x <= nouv.x+32){
 	  bouton = &nouv;
 	  // Ici, on génére une grille vierge
-	  if(alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Voulez vous vraiment initialiser la grille ?"))
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment initialiser la grille ?"))
 	    sudoku = initGrille();
-	  
-	  refresh(sudoku);
 	  bouton = NULL;
+	  apresAlerte(sudoku);
 	}
 	else if(x >= ouvrir.x && x <= ouvrir.x+32){
 	  bouton = &ouvrir;
 	  // Ici, on génére une grille jouable
-	  if(alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Voulez vous vraiment charger une grille ?"))
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment charger une grille ?"))
 	    sudoku = chargerGrille("grille.sdk");
-	  refresh(sudoku);
 	  bouton = NULL;
+	  apresAlerte(sudoku);
 	}
 	else if(x >= rec.x && x <= rec.x+32){
 	  bouton = &rec;
 	  // Ici on enregistre le sudoku en PDF
-	  if(alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Voulez vous vraiment enregistrer la grille ? La grille précédente sera effacée"))
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment enregistrer la grille ? La grille précédente sera effacée")){
 	    if(!sauvegarderGrille(sudoku, "grille.sdk")){
-	      alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdk ?");
-	      alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Il serait bon de vérifier");
+	      alert(DIAL_X, DIAL_Y, "Impossible d'enregistrer le sudoku. Etes vous sur des droits du fichier grille.sdk ?");
+	      alert(DIAL_X, DIAL_Y, "Il serait bon de vérifier");
 	    }
-	  refresh(sudoku);
+	  }
 	  bouton = NULL;
+	  apresAlerte(sudoku);
 	}
 	else if(x >= aide.x && x <= aide.x+32){
 	  bouton = &aide;
 	  // Ici, on affiche les règles du jeu
-	  if(alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Voulez vous vraiment avoir la solution ?")){
-	    if(!resolve(&sudoku))
-	      	  if(alert((FENETRE - 300)/2, (FENETRE - 100)/2, "Aucune solution. Initialiser la grille ?"))
-		    sudoku = initGrille();
+	  if(alert(DIAL_X, DIAL_Y, "Voulez vous vraiment avoir la solution ?")){
+	    if(!resolve(&sudoku)){
+	      if(alert(DIAL_X, DIAL_Y, "Aucune solution. Initialiser la grille ?"))
+		sudoku = initGrille();
+	    }
 	  }
-	  refresh(sudoku);
 	  bouton = NULL;
+	  apresAlerte(sudoku);
 	}
 	else if(x >= fermer.x && x <= fermer.x+32){
 	  bouton = &fermer;
@@ -117,9 +124,8 @@ int main(){
 
 	if(bouton != NULL && bouton->nb != 10){
 	  if(placer(&sudoku, lig, col, bouton->nb))
-	    bouton->down->affiche((col / 3) * 182 + DECALX_GRILLE + (col % 3) * 52, (lig / 3) * 182 + DECALY_GRILLE + (lig % 3) * 52);
+	    majEcran(sudoku);
 	}
-	//refresh(sudoku);
       }
       
       if(bouton != NULL)
@@ -206,7 +212,7 @@ void desalloueBmp(){
 void menu(){
   int i;
     // Limite du menu //
-  tracerLigne(0, 46, 600, 46);
+  tracerLigne(0, 46, FENETRE, 46);
   
   nouv.up->affiche(nouv.x, 7);
   ouvrir.up->affiche(ouvrir.x, 7);
@@ -220,42 +226,66 @@ void menu(){
   }
 }
 
-void afficheSudoku(Sudoku s){
-  int i, j;
-  int decalX = DECALX_GRILLE, decalY = DECALY_GRILLE;
+void positionCase(int lig, int col, int * x, int * y){
+  *x = DECALX_GRILLE + (col / 3) * 182 + (col % 3) * 52;
+  *y = DECALY_GRILLE + (lig / 3) * 182 + (lig % 3) * 52;
+}
 
-  for(i = 0; i < 9; i++){
-    for(j = 0; j < 9; j++){
+void majEcran(Sudoku s){
+  for(int i = 0; i < 9; i++){
+    for(int j = 0; j < 9; j++){
+      int code = s.grille[i][j] * 2 + (s.fixe[i][j] ? 1 : 0);
+      if(code == ecran[i][j])
+	continue;
+      int x, y;
+      positionCase(i, j, &x, &y);
       if(s.fixe[i][j])
-	b[s.grille[i][j]].down->affiche(decalX, decalY);
+	b[s.grille[i][j]].down->affiche(x, y);
       else
-	affiche(decalX, decalY, s.grille[i][j]);
-	//b[s.grille[i][j]].up->affiche(decalX, decalY);
-
-      if(j == 2 || j == 5 || j == 8)
-	decalX += 78;
-      else{
-	decalX += 52;
-      }
+	b[s.grille[i][j]].up->affiche(x, y);
+      ecran[i][j] = code;
     }
-    decalX = DECALX_GRILLE;
-    if(i == 2 || i == 5)
-      decalY += 78;
-    else
-      decalY += 52;      
-    
   }
 }
 
-void affiche(int x, int y, int nb){
-  recupereSousImage(b[nb].x, 7, b[nb].x + 32, 39);
-  afficheSousImage(x, y);
-}
-
-void refresh(Sudoku s){
+void peindreTout(Sudoku s){
   viderFenetre();
+  Bitmap::invaliderTout();
+  for(int i = 0; i < 9; i++)
+    for(int j = 0; j < 9; j++)
+      ecran[i][j] = -1;
   menu();
-  afficheSudoku(s);
+  majEcran(s);
   if(bouton != NULL)
     bouton->down->affiche(bouton->x, 7);
+}
+
+const int TAILLE_CASE = 32;
+
+/* Efface la zone du dialogue ainsi que les cases qu'il recouvre, puis marque
+   ces cases comme a redessiner. */
+void restaurerZone(int x, int y, int larg, int haut){
+  int minX = x, minY = y, maxX = x + larg, maxY = y + haut;
+
+  for(int i = 0; i < 9; i++){
+    for(int j = 0; j < 9; j++){
+      int cx, cy;
+      positionCase(i, j, &cx, &cy);
+      if(cx < x + larg && cx + TAILLE_CASE > x && cy < y + haut && cy + TAILLE_CASE > y){
+	if(cx < minX) minX = cx;
+	if(cy < minY) minY = cy;
+	if(cx + TAILLE_CASE > maxX) maxX = cx + TAILLE_CASE;
+	if(cy + TAILLE_CASE > maxY) maxY = cy + TAILLE_CASE;
+	ecran[i][j] = -1;
+      }
+    }
+  }
+
+  b[0].up->remplirFond(minX, minY, maxX, maxY);
+  Bitmap::invaliderZone(minX, minY, maxX + 1, maxY + 1);
+}
+
+void apresAlerte(Sudoku s){
+  restaurerZone(DIAL_X, DIAL_Y, DIAL_W, DIAL_H);
+  majEcran(s);
 }
